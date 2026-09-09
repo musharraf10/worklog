@@ -27,6 +27,54 @@ const getSheetName = () => {
   return process.env.GOOGLE_SHEETS_SHEET_NAME;
 };
 
+let isFormatEnsured = false;
+
+const ensureColumnFormatting = async (sheets, spreadsheetId, sheetName) => {
+  try {
+    const metadata = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: "sheets.properties",
+    });
+
+    const sheet = metadata.data.sheets?.find(
+      (item) => item.properties.title === sheetName,
+    );
+
+    if (!sheet) return;
+    const sheetId = sheet.properties.sheetId;
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: {
+        requests: [
+          {
+            repeatCell: {
+              range: {
+                sheetId,
+                startColumnIndex: 4, // Column E (Time From)
+                endColumnIndex: 6,   // Column F (Time To)
+                startRowIndex: 1,    // Row 2 downwards
+              },
+              cell: {
+                userEnteredFormat: {
+                  numberFormat: {
+                    type: "TIME",
+                    pattern: "hh:mm",
+                  },
+                },
+              },
+              fields: "userEnteredFormat.numberFormat",
+            },
+          },
+        ],
+      },
+    });
+    isFormatEnsured = true;
+  } catch (err) {
+    console.error("Error ensuring Google Sheets column formatting:", err);
+  }
+};
+
 const ensureHeaderRow = async () => {
   const sheets = getSheetsClient();
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
@@ -53,6 +101,9 @@ const ensureHeaderRow = async () => {
         values: [SHEET_HEADERS],
       },
     });
+    await ensureColumnFormatting(sheets, spreadsheetId, sheetName);
+  } else if (!isFormatEnsured) {
+    await ensureColumnFormatting(sheets, spreadsheetId, sheetName);
   }
 };
 
