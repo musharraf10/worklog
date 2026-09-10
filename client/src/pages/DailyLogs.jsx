@@ -249,39 +249,24 @@ export const DailyLogs = () => {
             <button
               type="button"
               onClick={() => handleTabChange('worklog')}
-              className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${
-                activeTab === 'worklog'
+              className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${activeTab === 'worklog'
                   ? 'bg-brand-primary text-brand-dark shadow-xs'
                   : 'text-brand-dark/70 hover:text-brand-dark'
-              }`}
+                }`}
             >
               WORK LOG
             </button>
             <button
               type="button"
               onClick={() => handleTabChange('mentorlog')}
-              className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${
-                activeTab === 'mentorlog'
+              className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${activeTab === 'mentorlog'
                   ? 'bg-brand-primary text-brand-dark shadow-xs'
                   : 'text-brand-dark/70 hover:text-brand-dark'
-              }`}
+                }`}
             >
               MENTOR LOG
             </button>
           </div>
-
-          {activeTab === 'worklog' && (
-            <Link
-              to="/manager-view"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-soft hover:bg-brand-primary/40 text-brand-dark text-sm sm:text-base font-semibold border border-brand-primary/40 transition-colors shadow-xs shrink-0"
-              title="Open spreadsheet Manager View"
-            >
-              <svg className="w-4 h-4 text-brand-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Manager View
-            </Link>
-          )}
         </div>
       </div>
 
@@ -291,11 +276,10 @@ export const DailyLogs = () => {
         <>
           {feedbackMessage && (
             <div
-              className={`p-4 rounded-xl border text-sm sm:text-base font-semibold flex items-center justify-between transition-all duration-200 ${
-                feedbackMessage.type === 'error'
+              className={`p-4 rounded-xl border text-sm sm:text-base font-semibold flex items-center justify-between transition-all duration-200 ${feedbackMessage.type === 'error'
                   ? 'bg-brand-soft border-brand-dark/30 text-brand-dark'
                   : 'bg-brand-soft/60 border-brand-primary text-brand-dark'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <svg className="w-5 h-5 text-brand-dark shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
