@@ -1,15 +1,12 @@
 import api, { isNetworkError } from './api';
 import {
-  getCachedLogs,
-  setCachedLogs,
-  upsertCachedLog,
-  removeCachedLog,
-  getPendingQueue,
-  enqueuePendingOperation,
-  dequeuePendingOperation,
+  getWorkLogQueue,
+  enqueueWorkLogOp,
+  dequeueWorkLogOp,
   notifySyncState,
   notifyQueueChanged,
   notifyLogsUpdated,
+  getTotalPendingCount,
 } from '../utils/storageUtils';
 import { calculateSpentMinutes } from '../utils/timeUtils';
 
@@ -18,17 +15,15 @@ let isSyncing = false;
 export const workLogService = {
   /**
    * Fetch all work logs for the logged-in user.
-   * Merges server data with any pending offline operations.
+   * Merges server data with any pending offline operations in-memory.
+   * Does NOT dump the entire database into localStorage.
    */
   async getAllWorkLogs() {
     try {
       const response = await api.get('/worklogs');
       const serverLogs = response.data?.data || [];
 
-      // Save to cache
-      setCachedLogs(serverLogs);
-
-      const pendingQueue = getPendingQueue();
+      const pendingQueue = getWorkLogQueue();
       const localCreates = pendingQueue
         .filter((item) => item.type === 'CREATE')
         .map((item) => ({
@@ -38,7 +33,7 @@ export const workLogService = {
             item.payload.timeFrom,
             item.payload.timeTo,
           ),
-          googleSheetSyncStatus: 'pending',
+          googleSheetSyncStatus: item.sheetsPending ? 'failed' : 'pending',
           isLocal: true,
           createdAt: new Date(item.timestamp).toISOString(),
         }));
@@ -50,7 +45,7 @@ export const workLogService = {
       const pendingUpdatesMap = new Map(
         pendingQueue
           .filter((i) => i.type === 'UPDATE')
-          .map((i) => [i.id, i.payload]),
+          .map((i) => [i.id, i]),
       );
 
       const merged = [
@@ -59,7 +54,8 @@ export const workLogService = {
           .filter((log) => !pendingDeletes.has(log._id))
           .map((log) => {
             if (pendingUpdatesMap.has(log._id)) {
-              const upd = pendingUpdatesMap.get(log._id);
+              const updOp = pendingUpdatesMap.get(log._id);
+              const upd = updOp.payload || {};
               return {
                 ...log,
                 ...upd,
@@ -67,6 +63,9 @@ export const workLogService = {
                   upd.timeFrom || log.timeFrom,
                   upd.timeTo || log.timeTo,
                 ),
+                googleSheetSyncStatus: updOp.sheetsPending
+                  ? 'failed'
+                  : log.googleSheetSyncStatus || 'pending',
                 isLocal: true,
               };
             }
@@ -82,8 +81,7 @@ export const workLogService = {
       };
     } catch (error) {
       if (isNetworkError(error)) {
-        const cached = getCachedLogs();
-        const pendingQueue = getPendingQueue();
+        const pendingQueue = getWorkLogQueue();
         const localCreates = pendingQueue
           .filter((item) => item.type === 'CREATE')
           .map((item) => ({
@@ -98,19 +96,10 @@ export const workLogService = {
             createdAt: new Date(item.timestamp).toISOString(),
           }));
 
-        const pendingDeletes = new Set(
-          pendingQueue.filter((i) => i.type === 'DELETE').map((i) => i.id),
-        );
-
-        const merged = [
-          ...localCreates,
-          ...cached.filter((l) => !pendingDeletes.has(l._id || l.id)),
-        ];
-
         return {
           success: true,
-          count: merged.length,
-          data: merged,
+          count: localCreates.length,
+          data: localCreates,
           isFromCache: true,
         };
       }
@@ -127,9 +116,22 @@ export const workLogService = {
       return response.data;
     } catch (error) {
       if (isNetworkError(error)) {
-        const cached = getCachedLogs().find((l) => (l._id || l.id) === id);
-        if (cached) {
-          return { success: true, data: cached, isFromCache: true };
+        const pendingQueue = getWorkLogQueue();
+        const pendingItem = pendingQueue.find((item) => item.id === id);
+        if (pendingItem) {
+          return {
+            success: true,
+            data: {
+              _id: pendingItem.id,
+              ...pendingItem.payload,
+              spentMinutes: calculateSpentMinutes(
+                pendingItem.payload.timeFrom,
+                pendingItem.payload.timeTo,
+              ),
+              isLocal: true,
+            },
+            isFromCache: true,
+          };
         }
       }
       throw error;
@@ -151,11 +153,32 @@ export const workLogService = {
 
     try {
       const response = await api.post('/worklogs', workLogData);
-      const created = response.data?.data;
-      if (created) {
-        upsertCachedLog(created);
+      const isSheetsSynced = response.data?.sheetsSynced;
+
+      if (isSheetsSynced) {
+        // Both backend and Sheets confirmed successful:
+        // Do NOT store in localStorage; remove any matching local queue entry
+        dequeueWorkLogOp(response.data?.data?._id);
+        notifySyncState('synced', 'Saved and synced');
+      } else {
+        // Backend succeeded but Google Sheets failed/pending:
+        // Store only for retry in localStorage
+        const createdId = response.data?.data?._id;
+        if (createdId) {
+          enqueueWorkLogOp({
+            type: 'UPDATE',
+            id: createdId,
+            payload: workLogData,
+            backendSynced: true,
+            sheetsPending: true,
+          });
+        }
+        notifySyncState(
+          'failed',
+          'Saved to database, Google Sheets sync pending — will retry',
+        );
       }
-      notifySyncState('synced', 'Saved');
+
       notifyLogsUpdated();
       return response.data;
     } catch (error) {
@@ -177,13 +200,14 @@ export const workLogService = {
       createdAt: new Date().toISOString(),
     };
 
-    enqueuePendingOperation({
+    enqueueWorkLogOp({
       type: 'CREATE',
       id: tempId,
       payload: workLogData,
+      backendSynced: false,
+      sheetsPending: false,
     });
 
-    upsertCachedLog(localItem);
     notifySyncState('pending', 'Saved locally — syncing when online');
     notifyLogsUpdated();
 
@@ -211,11 +235,27 @@ export const workLogService = {
 
     try {
       const response = await api.put(`/worklogs/${id}`, workLogData);
-      const updated = response.data?.data;
-      if (updated) {
-        upsertCachedLog(updated);
+      const isSheetsSynced = response.data?.sheetsSynced;
+
+      if (isSheetsSynced) {
+        // Confirmed successful on both backend and Sheets:
+        dequeueWorkLogOp(id);
+        notifySyncState('synced', 'Saved and synced');
+      } else {
+        // Backend succeeded but Google Sheets failed:
+        enqueueWorkLogOp({
+          type: 'UPDATE',
+          id,
+          payload: workLogData,
+          backendSynced: true,
+          sheetsPending: true,
+        });
+        notifySyncState(
+          'failed',
+          'Saved to database, Google Sheets sync pending — will retry',
+        );
       }
-      notifySyncState('synced', 'Saved');
+
       notifyLogsUpdated();
       return response.data;
     } catch (error) {
@@ -228,16 +268,20 @@ export const workLogService = {
 
   _saveUpdateLocally(id, workLogData, spentMinutes, isTempId) {
     if (isTempId) {
-      enqueuePendingOperation({
+      enqueueWorkLogOp({
         type: 'CREATE',
         id,
         payload: workLogData,
+        backendSynced: false,
+        sheetsPending: false,
       });
     } else {
-      enqueuePendingOperation({
+      enqueueWorkLogOp({
         type: 'UPDATE',
         id,
         payload: workLogData,
+        backendSynced: false,
+        sheetsPending: false,
       });
     }
 
@@ -249,7 +293,6 @@ export const workLogService = {
       updatedAt: new Date().toISOString(),
     };
 
-    upsertCachedLog(localUpdated);
     notifySyncState('pending', 'Saved locally — syncing when online');
     notifyLogsUpdated();
 
@@ -273,12 +316,13 @@ export const workLogService = {
 
     try {
       const response = await api.delete(`/worklogs/${id}`);
-      removeCachedLog(id);
-      notifySyncState('synced', 'Saved');
+      // Only dequeue if delete succeeded
+      dequeueWorkLogOp(id);
+      notifySyncState('synced', 'Deleted');
       notifyLogsUpdated();
       return response.data;
     } catch (error) {
-      if (isNetworkError(error)) {
+      if (isNetworkError(error) || error.response?.status === 502) {
         return this._saveDeleteLocally(id, isTempId);
       }
       throw error;
@@ -287,16 +331,17 @@ export const workLogService = {
 
   _saveDeleteLocally(id, isTempId) {
     if (isTempId) {
-      dequeuePendingOperation(id);
+      dequeueWorkLogOp(id);
     } else {
-      enqueuePendingOperation({
+      enqueueWorkLogOp({
         type: 'DELETE',
         id,
         payload: null,
+        backendSynced: false,
+        sheetsPending: false,
       });
     }
 
-    removeCachedLog(id);
     notifySyncState('pending', 'Saved locally — syncing when online');
     notifyLogsUpdated();
 
@@ -309,13 +354,16 @@ export const workLogService = {
 
   /**
    * Synchronize pending operations with the backend when online.
+   * Only dequeues when BOTH backend and Sheets confirm success.
    */
   async syncPendingWorkLogs() {
     if (isSyncing || !navigator.onLine) return { syncedCount: 0 };
 
-    const queue = getPendingQueue();
+    const queue = getWorkLogQueue();
     if (queue.length === 0) {
-      notifySyncState('synced', 'Synced');
+      if (getTotalPendingCount() === 0) {
+        notifySyncState('synced', 'Synced');
+      }
       return { syncedCount: 0 };
     }
 
@@ -323,56 +371,104 @@ export const workLogService = {
     notifySyncState('syncing', 'Syncing...');
 
     let syncedCount = 0;
+    let hasErrors = false;
 
     for (const op of [...queue]) {
       try {
-        if (op.type === 'CREATE') {
-          const response = await api.post('/worklogs', op.payload);
-          const created = response.data?.data;
-          if (created) {
-            removeCachedLog(op.id);
-            upsertCachedLog(created);
+        if (op.backendSynced && op.sheetsPending) {
+          // Backend already recorded, retry Google Sheets sync
+          const response = await api.post(
+            `/worklogs/${op.id}/retry-sheets-sync`,
+          );
+          if (response.data?.sheetsSynced) {
+            dequeueWorkLogOp(op.id);
+            syncedCount++;
+          } else {
+            hasErrors = true;
           }
-          dequeuePendingOperation(op.id);
-          syncedCount++;
+        } else if (op.type === 'CREATE') {
+          const response = await api.post('/worklogs', op.payload);
+          const isSheetsSynced = response.data?.sheetsSynced;
+          if (isSheetsSynced) {
+            dequeueWorkLogOp(op.id);
+            syncedCount++;
+          } else {
+            // Backend succeeded, sheets failed: preserve in queue with new ID
+            const newId = response.data?.data?._id;
+            dequeueWorkLogOp(op.id);
+            if (newId) {
+              enqueueWorkLogOp({
+                type: 'UPDATE',
+                id: newId,
+                payload: op.payload,
+                backendSynced: true,
+                sheetsPending: true,
+              });
+            }
+            hasErrors = true;
+          }
         } else if (op.type === 'UPDATE') {
           const response = await api.put(`/worklogs/${op.id}`, op.payload);
-          const updated = response.data?.data;
-          if (updated) {
-            upsertCachedLog(updated);
+          const isSheetsSynced = response.data?.sheetsSynced;
+          if (isSheetsSynced) {
+            dequeueWorkLogOp(op.id);
+            syncedCount++;
+          } else {
+            enqueueWorkLogOp({
+              type: 'UPDATE',
+              id: op.id,
+              payload: op.payload,
+              backendSynced: true,
+              sheetsPending: true,
+            });
+            hasErrors = true;
           }
-          dequeuePendingOperation(op.id);
-          syncedCount++;
         } else if (op.type === 'DELETE') {
           await api.delete(`/worklogs/${op.id}`);
-          removeCachedLog(op.id);
-          dequeuePendingOperation(op.id);
+          dequeueWorkLogOp(op.id);
           syncedCount++;
         }
       } catch (err) {
         if (isNetworkError(err)) {
-          notifySyncState('failed', 'Sync failed — will retry');
           isSyncing = false;
+          notifySyncState('failed', 'Sync paused — network offline');
           notifyLogsUpdated();
           return { syncedCount, hasErrors: true };
+        } else if (err.response?.status === 404) {
+          // If record no longer exists on server, remove from queue
+          dequeueWorkLogOp(op.id);
         } else {
-          dequeuePendingOperation(op.id);
+          hasErrors = true;
         }
       }
     }
 
     isSyncing = false;
-    const remaining = getPendingQueue().length;
+    const remaining = getTotalPendingCount();
+
     if (remaining === 0) {
       notifySyncState('synced', 'Synced');
+    } else if (hasErrors) {
+      notifySyncState(
+        'failed',
+        'Google Sheets sync pending retry — will retry automatically',
+      );
     } else {
       notifySyncState('pending', `${remaining} pending sync`);
     }
+
     notifyQueueChanged();
     notifyLogsUpdated();
 
-    return { syncedCount, hasErrors: false };
+    return { syncedCount, hasErrors };
   },
 };
+
+// Automatic retry when back online
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    workLogService.syncPendingWorkLogs();
+  });
+}
 
 export default workLogService;

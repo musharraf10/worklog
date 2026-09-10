@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AuthContext } from './authContextDef';
 import authService from '../services/authService';
 import workLogService from '../services/workLogService';
+import mentorLogService from '../services/mentorLogService';
 import {
   getAuthToken,
   setAuthToken,
@@ -27,7 +28,10 @@ export const AuthProvider = ({ children }) => {
   const triggerSync = useCallback(async () => {
     if (token && navigator.onLine) {
       try {
-        await workLogService.syncPendingWorkLogs();
+        await Promise.allSettled([
+          workLogService.syncPendingWorkLogs(),
+          mentorLogService.syncPendingMentorLogs(),
+        ]);
       } catch (err) {
         console.error('Auto sync failed:', err);
       }

@@ -1,7 +1,17 @@
 const TOKEN_KEY = 'worklog_auth_token';
 const USER_KEY = 'worklog_auth_user';
-const PENDING_QUEUE_KEY = 'worklog_pending_queue';
-const CACHED_LOGS_KEY = 'worklog_cached_logs';
+const WORKLOG_QUEUE_KEY = 'worklog_pending_queue';
+const MENTOR_QUEUE_KEY = 'mentorlog_pending_queue';
+
+// Purge any legacy full-database caches immediately on startup
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('worklog_cached_logs');
+    localStorage.removeItem('mentorlog_cached_logs');
+  } catch {
+    // Ignore storage access errors
+  }
+}
 
 /**
  * Safely parse JSON from localStorage
@@ -70,6 +80,7 @@ export const setStoredUser = (user) => {
     localStorage.removeItem(USER_KEY);
     return;
   }
+  // Sanitize strictly: NEVER store passwords, secrets, or raw credentials
   const safeProfile = {
     id: user.id || user._id,
     name: user.name,
@@ -89,102 +100,223 @@ export const clearStoredUser = () => {
 };
 
 /* ==========================================================================
-   PENDING SYNC QUEUE (Offline Operations)
-   Each item: { id: string, type: 'CREATE' | 'UPDATE' | 'DELETE', payload: object, timestamp: number }
+   WORK LOG PENDING QUEUE (Temporary Retry Storage ONLY)
    ========================================================================== */
 
-export const getPendingQueue = () => {
-  return safeGetJson(PENDING_QUEUE_KEY, []);
+export const getWorkLogQueue = () => {
+  return safeGetJson(WORKLOG_QUEUE_KEY, []);
 };
 
-export const setPendingQueue = (queue) => {
-  safeSetJson(PENDING_QUEUE_KEY, queue);
+export const setWorkLogQueue = (queue) => {
+  safeSetJson(WORKLOG_QUEUE_KEY, queue);
   notifyQueueChanged();
 };
 
-export const enqueuePendingOperation = ({ type, id, payload }) => {
-  const queue = getPendingQueue();
-  const existingIndex = queue.findIndex(
-    (item) => item.id === id && item.type === type,
-  );
+export const enqueueWorkLogOp = ({
+  type,
+  id,
+  payload,
+  backendSynced = false,
+  sheetsPending = false,
+}) => {
+  const queue = getWorkLogQueue();
+  const existingIndex = queue.findIndex((item) => item.id === id);
 
-  const operation = {
+  const newOp = {
     id: id || `local_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
     type,
     payload,
+    backendSynced,
+    sheetsPending,
     timestamp: Date.now(),
     retryCount: 0,
   };
 
   if (existingIndex >= 0) {
-    queue[existingIndex] = {
-      ...queue[existingIndex],
-      ...operation,
-      retryCount: queue[existingIndex].retryCount || 0,
-    };
+    const existing = queue[existingIndex];
+    // Intelligent consolidation:
+    if (existing.type === 'CREATE') {
+      if (type === 'UPDATE') {
+        // Edit to an uncreated local item updates CREATE payload directly
+        queue[existingIndex] = {
+          ...existing,
+          payload: { ...existing.payload, ...payload },
+          timestamp: Date.now(),
+        };
+      } else if (type === 'DELETE') {
+        // Deleting an item created offline cancels creation completely!
+        queue.splice(existingIndex, 1);
+      } else {
+        queue[existingIndex] = { ...existing, ...newOp };
+      }
+    } else if (existing.type === 'UPDATE') {
+      if (type === 'UPDATE') {
+        // Merge multiple edits to the same item
+        queue[existingIndex] = {
+          ...existing,
+          payload: { ...existing.payload, ...payload },
+          backendSynced,
+          sheetsPending,
+          timestamp: Date.now(),
+        };
+      } else if (type === 'DELETE') {
+        // Delete overrides pending update
+        queue[existingIndex] = newOp;
+      }
+    } else {
+      // Existing is DELETE
+      queue[existingIndex] = newOp;
+    }
   } else {
-    queue.push(operation);
+    queue.push(newOp);
   }
 
-  setPendingQueue(queue);
-  return operation;
+  setWorkLogQueue(queue);
+  return newOp;
 };
 
-export const dequeuePendingOperation = (operationId) => {
-  const queue = getPendingQueue();
+export const dequeueWorkLogOp = (operationId) => {
+  const queue = getWorkLogQueue();
   const filtered = queue.filter((item) => item.id !== operationId);
-  setPendingQueue(filtered);
+  setWorkLogQueue(filtered);
 };
 
-export const clearPendingQueue = () => {
-  setPendingQueue([]);
+export const clearWorkLogQueue = () => {
+  setWorkLogQueue([]);
+};
+
+// Aliases for backwards compatibility
+export const getPendingQueue = getWorkLogQueue;
+export const setPendingQueue = setWorkLogQueue;
+export const enqueuePendingOperation = enqueueWorkLogOp;
+export const dequeuePendingOperation = dequeueWorkLogOp;
+export const clearPendingQueue = clearWorkLogQueue;
+
+/* ==========================================================================
+   MENTOR LOG PENDING QUEUE (Temporary Retry Storage ONLY)
+   ========================================================================== */
+
+export const getMentorLogQueue = () => {
+  return safeGetJson(MENTOR_QUEUE_KEY, []);
+};
+
+export const setMentorLogQueue = (queue) => {
+  safeSetJson(MENTOR_QUEUE_KEY, queue);
+  notifyMentorQueueChanged();
+};
+
+export const enqueueMentorLogOp = ({
+  type,
+  id,
+  mentorLogId,
+  questionId,
+  payload,
+  backendSynced = false,
+  sheetsPending = false,
+}) => {
+  const queue = getMentorLogQueue();
+  const existingIndex = queue.findIndex(
+    (item) =>
+      item.id === id ||
+      (questionId && item.questionId === questionId && item.type === type),
+  );
+
+  const newOp = {
+    id: id || `local_mentor_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+    type,
+    mentorLogId,
+    questionId,
+    payload,
+    backendSynced,
+    sheetsPending,
+    timestamp: Date.now(),
+    retryCount: 0,
+  };
+
+  if (existingIndex >= 0) {
+    const existing = queue[existingIndex];
+    if (existing.type === 'CREATE_MENTOR_LOG') {
+      if (type === 'DELETE_MENTOR_LOG') {
+        queue.splice(existingIndex, 1);
+      } else {
+        queue[existingIndex] = { ...existing, ...newOp };
+      }
+    } else if (
+      existing.type === 'UPDATE_QUESTION' &&
+      type === 'UPDATE_QUESTION'
+    ) {
+      queue[existingIndex] = {
+        ...existing,
+        payload: { ...existing.payload, ...payload },
+        backendSynced,
+        sheetsPending,
+        timestamp: Date.now(),
+      };
+    } else if (type === 'DELETE_QUESTION') {
+      if (existing.type === 'ADD_QUESTION') {
+        queue.splice(existingIndex, 1);
+      } else {
+        queue[existingIndex] = newOp;
+      }
+    } else {
+      queue[existingIndex] = { ...existing, ...newOp };
+    }
+  } else {
+    queue.push(newOp);
+  }
+
+  setMentorLogQueue(queue);
+  return newOp;
+};
+
+export const dequeueMentorLogOp = (operationId) => {
+  const queue = getMentorLogQueue();
+  const filtered = queue.filter((item) => item.id !== operationId);
+  setMentorLogQueue(filtered);
+};
+
+export const clearMentorLogQueue = () => {
+  setMentorLogQueue([]);
+};
+
+export const getTotalPendingCount = () => {
+  return getWorkLogQueue().length + getMentorLogQueue().length;
 };
 
 /* ==========================================================================
-   CACHED WORK LOGS (For Offline Viewing & Optimistic UI)
+   DEPRECATED FULL-DATABASE CACHING (Stubbed to prevent storing full DB)
    ========================================================================== */
 
-export const getCachedLogs = () => {
-  return safeGetJson(CACHED_LOGS_KEY, []);
-};
-
-export const setCachedLogs = (logs) => {
-  safeSetJson(CACHED_LOGS_KEY, logs);
-};
-
-export const upsertCachedLog = (log) => {
-  const logs = getCachedLogs();
-  const logId = log._id || log.id;
-  const index = logs.findIndex((item) => (item._id || item.id) === logId);
-
-  if (index >= 0) {
-    logs[index] = { ...logs[index], ...log };
-  } else {
-    logs.unshift(log);
-  }
-
-  setCachedLogs(logs);
-};
-
-export const removeCachedLog = (logId) => {
-  const logs = getCachedLogs();
-  const filtered = logs.filter((item) => (item._id || item.id) !== logId);
-  setCachedLogs(filtered);
-};
+export const getCachedLogs = () => [];
+export const setCachedLogs = () => {};
+export const upsertCachedLog = () => {};
+export const removeCachedLog = () => {};
 
 /* ==========================================================================
    SYNC EVENTS & REACTIVE LISTENERS
    ========================================================================== */
 
 const QUEUE_EVENT = 'worklog:queue_changed';
+const MENTOR_QUEUE_EVENT = 'mentorlog:queue_changed';
 const SYNC_STATE_EVENT = 'worklog:sync_state_changed';
 const LOGS_UPDATED_EVENT = 'worklog:logs_updated';
 
 export const notifyQueueChanged = () => {
   if (typeof window !== 'undefined') {
-    const queue = getPendingQueue();
+    const queue = getWorkLogQueue();
     window.dispatchEvent(
       new CustomEvent(QUEUE_EVENT, { detail: { count: queue.length, queue } }),
+    );
+  }
+};
+
+export const notifyMentorQueueChanged = () => {
+  if (typeof window !== 'undefined') {
+    const queue = getMentorLogQueue();
+    window.dispatchEvent(
+      new CustomEvent(MENTOR_QUEUE_EVENT, {
+        detail: { count: queue.length, queue },
+      }),
     );
   }
 };
@@ -205,10 +337,20 @@ export const notifyLogsUpdated = () => {
 
 export const subscribeToQueue = (callback) => {
   if (typeof window === 'undefined') return () => {};
-  const handler = (e) => callback(e.detail);
+  const handler = () => {
+    callback({
+      count: getTotalPendingCount(),
+      workLogQueue: getWorkLogQueue(),
+      mentorLogQueue: getMentorLogQueue(),
+    });
+  };
   window.addEventListener(QUEUE_EVENT, handler);
-  callback({ count: getPendingQueue().length, queue: getPendingQueue() });
-  return () => window.removeEventListener(QUEUE_EVENT, handler);
+  window.addEventListener(MENTOR_QUEUE_EVENT, handler);
+  handler();
+  return () => {
+    window.removeEventListener(QUEUE_EVENT, handler);
+    window.removeEventListener(MENTOR_QUEUE_EVENT, handler);
+  };
 };
 
 export const subscribeToSyncState = (callback) => {

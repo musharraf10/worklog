@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import WorkLogForm from '../components/worklogs/WorkLogForm';
 import WorkLogTable from '../components/worklogs/WorkLogTable';
 import WorkLogFilters from '../components/worklogs/WorkLogFilters';
+import MentorLogView from '../components/mentorlogs/MentorLogView';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Loader from '../components/common/Loader';
 import EmptyState from '../components/common/EmptyState';
@@ -13,6 +14,22 @@ import { formatMinutes } from '../utils/timeUtils';
 import { CATEGORIES } from '../constants/workLogConstants';
 
 export const DailyLogs = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab');
+  const activeTab =
+    rawTab === 'worklog' || rawTab === 'mentorlog'
+      ? rawTab
+      : localStorage.getItem('daily_logs_active_tab') || 'worklog';
+
+  const handleTabChange = (newTab) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', newTab);
+      return next;
+    });
+    localStorage.setItem('daily_logs_active_tab', newTab);
+  };
+
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -214,111 +231,152 @@ export const DailyLogs = () => {
 
   return (
     <div className="space-y-6 text-left">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-brand-dark tracking-tight">Work Logs</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-brand-dark tracking-tight">
+            {activeTab === 'mentorlog' ? 'Mentor Logs' : 'Work Logs'}
+          </h2>
           <p className="text-sm sm:text-base text-brand-dark/75 mt-1">
-            Create entries using the inline form and manage them with in-place editing.
+            {activeTab === 'mentorlog'
+              ? 'Record detailed student mentoring sessions and question logs linked to your actual work logs.'
+              : 'Create entries using the inline form and manage them with in-place editing.'}
           </p>
         </div>
-        <Link
-          to="/manager-view"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-soft hover:bg-brand-primary/40 text-brand-dark text-sm sm:text-base font-semibold border border-brand-primary/40 transition-colors shadow-xs shrink-0 self-start sm:self-auto"
-          title="Open spreadsheet Manager View"
-        >
-          <svg className="w-4 h-4 text-brand-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Manager View
-        </Link>
-      </div>
 
-      {feedbackMessage && (
-        <div
-          className={`p-4 rounded-xl border text-sm sm:text-base font-semibold flex items-center justify-between transition-all duration-200 ${
-            feedbackMessage.type === 'error'
-              ? 'bg-brand-soft border-brand-dark/30 text-brand-dark'
-              : 'bg-brand-soft/60 border-brand-primary text-brand-dark'
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            <svg className="w-5 h-5 text-brand-dark shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{feedbackMessage.text}</span>
+        <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+          {/* Segmented Control [ WORK LOG ] [ MENTOR LOG ] */}
+          <div className="inline-flex items-center p-1 bg-brand-soft/60 rounded-xl border border-brand-primary/40 shadow-xs">
+            <button
+              type="button"
+              onClick={() => handleTabChange('worklog')}
+              className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${
+                activeTab === 'worklog'
+                  ? 'bg-brand-primary text-brand-dark shadow-xs'
+                  : 'text-brand-dark/70 hover:text-brand-dark'
+              }`}
+            >
+              WORK LOG
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('mentorlog')}
+              className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${
+                activeTab === 'mentorlog'
+                  ? 'bg-brand-primary text-brand-dark shadow-xs'
+                  : 'text-brand-dark/70 hover:text-brand-dark'
+              }`}
+            >
+              MENTOR LOG
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setFeedbackMessage(null)}
-            className="text-brand-dark/60 hover:text-brand-dark p-1 rounded-md"
-          >
-            ✕
-          </button>
+
+          {activeTab === 'worklog' && (
+            <Link
+              to="/manager-view"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-soft hover:bg-brand-primary/40 text-brand-dark text-sm sm:text-base font-semibold border border-brand-primary/40 transition-colors shadow-xs shrink-0"
+              title="Open spreadsheet Manager View"
+            >
+              <svg className="w-4 h-4 text-brand-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Manager View
+            </Link>
+          )}
         </div>
-      )}
-
-      {/* Inline Form (No Modal!) */}
-      <WorkLogForm onSubmit={handleCreateWorkLog} isLoading={isSubmitting} />
-
-      {/* Filters */}
-      <WorkLogFilters
-        filters={filters}
-        onChange={setFilters}
-        categoryOptions={categoryOptions}
-        onReset={() =>
-          setFilters({
-            search: '',
-            date: '',
-            category: '',
-            status: '',
-            priority: '',
-          })
-        }
-      />
-
-      {/* Metrics Row */}
-      <div className="flex items-center justify-between px-1 text-sm sm:text-base text-brand-dark/80 font-medium">
-        <span>
-          Showing <strong className="text-brand-dark font-bold">{filteredLogs.length}</strong>{' '}
-          {filteredLogs.length === 1 ? 'log' : 'logs'}
-        </span>
-        <span>
-          Total Time:{' '}
-          <strong className="text-brand-dark font-bold">
-            {formatMinutes(totalFilteredMinutes)}
-          </strong>
-        </span>
       </div>
 
-      {/* Work Logs List with In-Place Editing */}
-      {isLoading ? (
-        <Loader text="Loading work logs..." />
-      ) : filteredLogs.length === 0 ? (
-        <EmptyState
-          title="No work logs found"
-          description="Try adjusting your search criteria or add a new work log above."
-        />
+      {activeTab === 'mentorlog' ? (
+        <MentorLogView />
       ) : (
-        <WorkLogTable
-          logs={filteredLogs}
-          activeDateKey={activeDateKey}
-          onSave={handleSaveEdit}
-          onDelete={handleDeleteClick}
-        />
-      )}
+        <>
+          {feedbackMessage && (
+            <div
+              className={`p-4 rounded-xl border text-sm sm:text-base font-semibold flex items-center justify-between transition-all duration-200 ${
+                feedbackMessage.type === 'error'
+                  ? 'bg-brand-soft border-brand-dark/30 text-brand-dark'
+                  : 'bg-brand-soft/60 border-brand-primary text-brand-dark'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <svg className="w-5 h-5 text-brand-dark shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{feedbackMessage.text}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFeedbackMessage(null)}
+                className="text-brand-dark/60 hover:text-brand-dark p-1 rounded-md"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
-      {/* Delete Confirmation Modal (Modal ONLY for confirmation) */}
-      <ConfirmDialog
-        isOpen={Boolean(deleteTarget)}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Work Log"
-        message={`Are you sure you want to delete the work log "${deleteTarget?.task}"? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        isLoading={isDeleting}
-        variant="danger"
-      />
+          {/* Inline Form (No Modal!) */}
+          <WorkLogForm onSubmit={handleCreateWorkLog} isLoading={isSubmitting} />
+
+          {/* Filters */}
+          <WorkLogFilters
+            filters={filters}
+            onChange={setFilters}
+            categoryOptions={categoryOptions}
+            onReset={() =>
+              setFilters({
+                search: '',
+                date: '',
+                category: '',
+                status: '',
+                priority: '',
+              })
+            }
+          />
+
+          {/* Metrics Row */}
+          <div className="flex items-center justify-between px-1 text-sm sm:text-base text-brand-dark/80 font-medium">
+            <span>
+              Showing <strong className="text-brand-dark font-bold">{filteredLogs.length}</strong>{' '}
+              {filteredLogs.length === 1 ? 'log' : 'logs'}
+            </span>
+            <span>
+              Total Time:{' '}
+              <strong className="text-brand-dark font-bold">
+                {formatMinutes(totalFilteredMinutes)}
+              </strong>
+            </span>
+          </div>
+
+          {/* Work Logs List with In-Place Editing */}
+          {isLoading ? (
+            <Loader text="Loading work logs..." />
+          ) : filteredLogs.length === 0 ? (
+            <EmptyState
+              title="No work logs found"
+              description="Try adjusting your search criteria or add a new work log above."
+            />
+          ) : (
+            <WorkLogTable
+              logs={filteredLogs}
+              activeDateKey={activeDateKey}
+              onSave={handleSaveEdit}
+              onDelete={handleDeleteClick}
+            />
+          )}
+
+          {/* Delete Confirmation Modal (Modal ONLY for confirmation) */}
+          <ConfirmDialog
+            isOpen={Boolean(deleteTarget)}
+            onClose={() => setDeleteTarget(null)}
+            onConfirm={handleConfirmDelete}
+            title="Delete Work Log"
+            message={`Are you sure you want to delete the work log "${deleteTarget?.task}"? This action cannot be undone.`}
+            confirmText="Delete"
+            cancelText="Cancel"
+            isLoading={isDeleting}
+            variant="danger"
+          />
+        </>
+      )}
     </div>
   );
 };

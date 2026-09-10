@@ -16,14 +16,33 @@ export const ACTIVITY_TYPES = [
   "Class",
   "Interview",
   "Doubt Clarification",
+  "Mentoring Session",
+  "Mentoring",
   "Project Review",
   "Lab",
   "Meeting",
   "Preparation",
   "Follow-up",
   "Other",
-  "Mentoring",
 ];
+
+export const QUESTION_CATEGORIES = [
+  "Concept Clarification",
+  "Coding / Programming",
+  "Debugging",
+  "DSA / Problem Solving",
+  "Database",
+  "Project Related",
+  "Assignment",
+  "Interview Preparation",
+  "Deployment",
+  "Git / GitHub",
+  "Frontend",
+  "Backend",
+  "Other",
+];
+
+export const QUESTION_STATUSES = ["Solved", "Carry Forward"];
 
 export const STATUS_OPTIONS = [
   "Completed",

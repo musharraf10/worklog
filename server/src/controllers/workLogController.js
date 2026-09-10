@@ -39,16 +39,32 @@ const createWorkLog = async (req, res) => {
       remarks,
     });
 
-    syncNewWorkLog(workLog._id);
-
-    res.status(201).json({
-      success: true,
-      message: "Work log created successfully",
-      data: workLog,
-    });
+    let sheetsSynced = false;
+    try {
+      await syncNewWorkLog(workLog._id);
+      const refreshed = await WorkLog.findById(workLog._id);
+      sheetsSynced = refreshed?.googleSheetSyncStatus === "synced";
+      return res.status(201).json({
+        success: true,
+        sheetsSynced,
+        message: sheetsSynced
+          ? "Work log created and synced to Google Sheets"
+          : "Work log created, Google Sheets sync pending",
+        data: refreshed || workLog,
+      });
+    } catch (sheetErr) {
+      console.error("Sheets sync error on create:", sheetErr.message);
+      return res.status(201).json({
+        success: true,
+        sheetsSynced: false,
+        message: "Work log created, Google Sheets sync pending",
+        data: workLog,
+      });
+    }
   } catch (error) {
     res.status(400).json({
       success: false,
+      sheetsSynced: false,
       message: error.message,
     });
   }
@@ -147,10 +163,6 @@ const updateWorkLog = async (req, res) => {
       },
     );
 
-    if (workLog) {
-      syncUpdatedWorkLog(workLog._id);
-    }
-
     if (!workLog) {
       return res.status(404).json({
         success: false,
@@ -158,14 +170,32 @@ const updateWorkLog = async (req, res) => {
       });
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Work log updated successfully",
-      data: workLog,
-    });
+    let sheetsSynced = false;
+    try {
+      await syncUpdatedWorkLog(workLog._id);
+      const refreshed = await WorkLog.findById(workLog._id);
+      sheetsSynced = refreshed?.googleSheetSyncStatus === "synced";
+      return res.status(200).json({
+        success: true,
+        sheetsSynced,
+        message: sheetsSynced
+          ? "Work log updated and synced to Google Sheets"
+          : "Work log updated, Google Sheets sync pending",
+        data: refreshed || workLog,
+      });
+    } catch (sheetErr) {
+      console.error("Sheets sync error on update:", sheetErr.message);
+      return res.status(200).json({
+        success: true,
+        sheetsSynced: false,
+        message: "Work log updated, Google Sheets sync pending",
+        data: workLog,
+      });
+    }
   } catch (error) {
     res.status(400).json({
       success: false,
+      sheetsSynced: false,
       message: error.message,
     });
   }
@@ -188,23 +218,78 @@ const deleteWorkLog = async (req, res) => {
 
     const googleSheetRowNumber = workLog.googleSheetRowNumber;
 
-    await WorkLog.findByIdAndDelete(workLog._id);
-
-    if (googleSheetRowNumber) {
-      syncDeletedWorkLog(googleSheetRowNumber).catch((err) => {
-        console.error("Google Sheets delete sync background error:", err.message);
-      });
+    if (googleSheetRowNumber && googleSheetRowNumber >= 2) {
+      try {
+        await syncDeletedWorkLog(googleSheetRowNumber);
+      } catch (err) {
+        console.error("Google Sheets delete sync failed:", err.message);
+        await WorkLog.findByIdAndUpdate(workLog._id, {
+          googleSheetSyncStatus: "failed",
+          googleSheetSyncError: err.message,
+        });
+        return res.status(502).json({
+          success: false,
+          sheetsSynced: false,
+          message: "Google Sheets sync failed — will retry",
+        });
+      }
     }
+
+    await WorkLog.findByIdAndDelete(workLog._id);
 
     res.status(200).json({
       success: true,
+      sheetsSynced: true,
       message: "Work log deleted successfully",
     });
   } catch (error) {
     console.error("Delete work log error:", error);
     res.status(400).json({
       success: false,
+      sheetsSynced: false,
       message: error.message || "Invalid work log ID",
+    });
+  }
+};
+
+// Retry Google Sheets sync for an existing WorkLog
+const retrySheetsSync = async (req, res) => {
+  try {
+    const workLog = await WorkLog.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
+
+    if (!workLog) {
+      return res.status(404).json({
+        success: false,
+        message: "Work log not found",
+      });
+    }
+
+    if (workLog.googleSheetRowNumber && workLog.googleSheetRowNumber >= 2) {
+      await syncUpdatedWorkLog(workLog._id);
+    } else {
+      await syncNewWorkLog(workLog._id);
+    }
+
+    const refreshed = await WorkLog.findById(workLog._id);
+    const sheetsSynced = refreshed?.googleSheetSyncStatus === "synced";
+
+    res.status(200).json({
+      success: true,
+      sheetsSynced,
+      message: sheetsSynced
+        ? "Google Sheets sync successful"
+        : "Google Sheets sync failed — will retry",
+      data: refreshed || workLog,
+    });
+  } catch (error) {
+    console.error("Retry sheets sync error:", error);
+    res.status(500).json({
+      success: false,
+      sheetsSynced: false,
+      message: error.message,
     });
   }
 };
@@ -215,4 +300,5 @@ module.exports = {
   getWorkLogById,
   updateWorkLog,
   deleteWorkLog,
+  retrySheetsSync,
 };

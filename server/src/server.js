@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const workLogRoutes = require("./routes/workLogRoutes");
 const authRoutes = require("./routes/authRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const mentorLogRoutes = require("./routes/mentorLogRoutes");
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorMiddleware");
 
@@ -31,6 +32,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/worklogs/summary", reportRoutes);
 
 app.use("/api/worklogs", workLogRoutes);
+
+app.use("/api/mentor-logs", mentorLogRoutes);
 
 app.use(errorHandler);
 
