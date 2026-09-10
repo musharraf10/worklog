@@ -23,6 +23,7 @@ export const ACTIVITY_TYPES = [
   "Meeting",
   "Preparation",
   "Follow-up",
+  "Exam Invigilation",
   "Other",
 ];
 
