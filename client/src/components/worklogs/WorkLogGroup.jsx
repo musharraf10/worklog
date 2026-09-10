@@ -60,8 +60,16 @@ export const WorkLogGroup = ({
       timeFrom: log.timeFrom || '09:00',
       timeTo: log.timeTo || '10:00',
       hallSection: log.hallSection || '',
-      status: log.status || 'Completed',
-      priority: log.priority || 'Normal',
+      status:
+        log.status === 'Pending' ? 'In Progress' : log.status || 'Completed',
+      priority:
+        log.priority === 'Normal'
+          ? 'Medium'
+          : log.priority === 'Important'
+            ? 'High'
+            : log.priority === 'Urgent'
+              ? 'Highest'
+              : log.priority || 'Medium',
       remarks: log.remarks || '',
     });
     setRowError('');
@@ -139,10 +147,16 @@ export const WorkLogGroup = ({
 
   const getPriorityBadge = (priority) => {
     switch (priority) {
-      case 'Urgent':
+      case 'Highest':
         return 'bg-brand-dark text-brand-light font-bold';
-      case 'Important':
+      case 'High':
         return 'bg-brand-primary text-brand-dark font-bold';
+      case 'Medium':
+        return 'bg-brand-soft border border-brand-primary/40 text-brand-dark font-semibold';
+      case 'Low':
+        return 'bg-brand-light border border-brand-dark/25 text-brand-dark/80 font-medium';
+      case 'Adhoc':
+        return 'bg-brand-primary/30 border border-brand-dark/30 text-brand-dark font-semibold italic';
       default:
         return 'bg-brand-soft/80 text-brand-dark font-semibold';
     }
@@ -154,6 +168,14 @@ export const WorkLogGroup = ({
         return 'bg-brand-soft border border-brand-primary/40 text-brand-dark font-semibold';
       case 'In Progress':
         return 'bg-brand-primary/40 border border-brand-dark/20 text-brand-dark font-semibold';
+      case 'Yet to Start':
+        return 'bg-brand-light border border-brand-dark/25 text-brand-dark/80 font-medium';
+      case 'On Hold':
+        return 'bg-brand-soft/60 border border-brand-dark/30 text-brand-dark/90 font-medium';
+      case 'Carry Forward':
+        return 'bg-brand-primary/20 border border-brand-primary text-brand-dark font-semibold';
+      case 'Not Done':
+        return 'bg-brand-dark text-brand-light font-bold';
       default:
         return 'bg-brand-light border border-brand-dark/25 text-brand-dark/85 font-semibold';
     }
@@ -427,7 +449,7 @@ export const WorkLogGroup = ({
 
                   {/* Priority badge */}
                   <span className={`px-3 py-1 rounded-full text-sm ${getPriorityBadge(task.priority)}`}>
-                    {task.priority || 'Normal'}
+                    {task.priority || 'Medium'}
                   </span>
 
                   {/* Sync status badge */}

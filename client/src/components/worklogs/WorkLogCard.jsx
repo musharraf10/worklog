@@ -46,8 +46,16 @@ export const WorkLogCard = ({
     timeFrom: log.timeFrom || '09:00',
     timeTo: log.timeTo || '10:00',
     hallSection: log.hallSection || '',
-    status: log.status || 'Completed',
-    priority: log.priority || 'Normal',
+    status:
+      log.status === 'Pending' ? 'In Progress' : log.status || 'Completed',
+    priority:
+      log.priority === 'Normal'
+        ? 'Medium'
+        : log.priority === 'Important'
+          ? 'High'
+          : log.priority === 'Urgent'
+            ? 'Highest'
+            : log.priority || 'Medium',
     remarks: log.remarks || '',
   });
 
@@ -123,10 +131,16 @@ export const WorkLogCard = ({
 
   const getPriorityBadge = (priority) => {
     switch (priority) {
-      case 'Urgent':
+      case 'Highest':
         return 'bg-brand-dark text-brand-light font-bold';
-      case 'Important':
-        return 'bg-brand-primary text-brand-dark font-semibold';
+      case 'High':
+        return 'bg-brand-primary text-brand-dark font-bold';
+      case 'Medium':
+        return 'bg-brand-soft border border-brand-primary/40 text-brand-dark font-semibold';
+      case 'Low':
+        return 'bg-brand-light border border-brand-dark/25 text-brand-dark/80 font-medium';
+      case 'Adhoc':
+        return 'bg-brand-primary/30 border border-brand-dark/30 text-brand-dark font-semibold italic';
       default:
         return 'bg-brand-soft text-brand-dark';
     }
@@ -135,9 +149,17 @@ export const WorkLogCard = ({
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Completed':
-        return 'bg-brand-soft/80 text-brand-dark border border-brand-primary/50';
+        return 'bg-brand-soft border border-brand-primary/40 text-brand-dark font-semibold';
       case 'In Progress':
-        return 'bg-brand-primary/40 text-brand-dark border border-brand-dark/20';
+        return 'bg-brand-primary/40 text-brand-dark border border-brand-dark/20 font-semibold';
+      case 'Yet to Start':
+        return 'bg-brand-light border border-brand-dark/25 text-brand-dark/80 font-medium';
+      case 'On Hold':
+        return 'bg-brand-soft/60 border border-brand-dark/30 text-brand-dark/90 font-medium';
+      case 'Carry Forward':
+        return 'bg-brand-primary/20 border border-brand-primary text-brand-dark font-semibold';
+      case 'Not Done':
+        return 'bg-brand-dark text-brand-light font-bold';
       default:
         return 'bg-brand-light text-brand-dark/80 border border-brand-dark/30';
     }
@@ -312,7 +334,7 @@ export const WorkLogCard = ({
               log.priority,
             )}`}
           >
-            {log.priority || 'Normal'}
+            {log.priority || 'Medium'}
           </span>
           <span
             className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusBadge(

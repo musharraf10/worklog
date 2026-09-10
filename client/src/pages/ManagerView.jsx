@@ -115,10 +115,16 @@ export const ManagerView = () => {
 
   const getPriorityBadgeClass = (priority) => {
     switch (priority) {
-      case 'Urgent':
+      case 'Highest':
         return 'bg-brand-dark text-brand-light font-bold px-2 py-0.5 rounded text-xs';
-      case 'Important':
+      case 'High':
         return 'bg-brand-primary text-brand-dark font-bold px-2 py-0.5 rounded text-xs';
+      case 'Medium':
+        return 'bg-brand-soft border border-brand-primary/40 text-brand-dark font-semibold px-2 py-0.5 rounded text-xs';
+      case 'Low':
+        return 'bg-brand-light border border-brand-dark/25 text-brand-dark/80 px-2 py-0.5 rounded text-xs';
+      case 'Adhoc':
+        return 'bg-brand-primary/30 border border-brand-dark/30 text-brand-dark font-semibold italic px-2 py-0.5 rounded text-xs';
       default:
         return 'text-brand-dark/80 px-2 py-0.5 text-xs';
     }
@@ -130,6 +136,14 @@ export const ManagerView = () => {
         return 'bg-brand-soft border border-brand-primary/40 text-brand-dark font-semibold px-2 py-0.5 rounded text-xs';
       case 'In Progress':
         return 'bg-brand-primary/30 border border-brand-dark/20 text-brand-dark font-semibold px-2 py-0.5 rounded text-xs';
+      case 'Yet to Start':
+        return 'bg-brand-light border border-brand-dark/25 text-brand-dark/85 font-medium px-2 py-0.5 rounded text-xs';
+      case 'On Hold':
+        return 'bg-brand-soft/60 border border-brand-dark/30 text-brand-dark/90 font-medium px-2 py-0.5 rounded text-xs';
+      case 'Carry Forward':
+        return 'bg-brand-primary/20 border border-brand-primary text-brand-dark font-semibold px-2 py-0.5 rounded text-xs';
+      case 'Not Done':
+        return 'bg-brand-dark text-brand-light font-bold px-2 py-0.5 rounded text-xs';
       default:
         return 'bg-brand-light border border-brand-dark/25 text-brand-dark/85 font-medium px-2 py-0.5 rounded text-xs';
     }
@@ -279,7 +293,7 @@ export const ManagerView = () => {
                   </td>
                   <td className="py-2 px-3 border-r border-brand-dark/15 whitespace-nowrap text-center">
                     <span className={getPriorityBadgeClass(log.priority)}>
-                      {log.priority || 'Normal'}
+                      {log.priority || 'Medium'}
                     </span>
                   </td>
                   <td className="py-2 px-3 text-brand-dark/80 text-sm">

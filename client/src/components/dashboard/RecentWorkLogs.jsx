@@ -8,9 +8,17 @@ export const RecentWorkLogs = ({ logs = [], isLoading = false }) => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Completed':
-        return 'bg-brand-soft/80 border border-brand-primary/40 text-brand-dark';
+        return 'bg-brand-soft border border-brand-primary/40 text-brand-dark font-semibold';
       case 'In Progress':
-        return 'bg-brand-primary/40 border border-brand-dark/20 text-brand-dark';
+        return 'bg-brand-primary/40 border border-brand-dark/20 text-brand-dark font-semibold';
+      case 'Yet to Start':
+        return 'bg-brand-light border border-brand-dark/25 text-brand-dark/80 font-medium';
+      case 'On Hold':
+        return 'bg-brand-soft/60 border border-brand-dark/30 text-brand-dark/90 font-medium';
+      case 'Carry Forward':
+        return 'bg-brand-primary/20 border border-brand-primary text-brand-dark font-semibold';
+      case 'Not Done':
+        return 'bg-brand-dark text-brand-light font-bold';
       default:
         return 'bg-brand-light border border-brand-dark/20 text-brand-dark/80';
     }

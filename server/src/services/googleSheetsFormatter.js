@@ -45,7 +45,7 @@ const formatWorkLogRow = (workLog) => {
     formatSpentTime(workLog.spentMinutes),
     workLog.hallSection || "",
     workLog.status || "Completed",
-    workLog.priority || "Normal",
+    workLog.priority || "Medium",
     workLog.remarks || "",
   ];
 };

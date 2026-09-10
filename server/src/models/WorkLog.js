@@ -64,14 +64,27 @@ const workLogSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Completed", "In Progress", "Pending"],
-      default: "Completed",
+      enum: {
+        values: [
+          "Completed",
+          "Not Done",
+          "Yet to Start",
+          "On Hold",
+          "In Progress",
+          "Carry Forward",
+        ],
+        message: "{VALUE} is not a valid status",
+      },
+      default: "Yet to Start",
     },
 
     priority: {
       type: String,
-      enum: ["Normal", "Important", "Urgent"],
-      default: "Normal",
+      enum: {
+        values: ["Highest", "High", "Medium", "Low", "Adhoc"],
+        message: "{VALUE} is not a valid priority",
+      },
+      default: "Medium",
     },
 
     remarks: {
