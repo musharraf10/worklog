@@ -40,7 +40,7 @@ export const Login = () => {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          'Login failed. Please check your credentials.',
+        'Login failed. Please check your credentials.',
       );
     } finally {
       setIsLoading(false);
@@ -57,7 +57,7 @@ export const Login = () => {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          'Google authentication failed. Please try again.',
+        'Google authentication failed. Please try again.',
       );
     } finally {
       setIsGoogleLoading(false);
@@ -136,16 +136,16 @@ export const Login = () => {
         </form>
 
         {/* GIS Google Sign-In Button */}
-        <GoogleSignInButton
+        {/* <GoogleSignInButton
           text="signin_with"
           onSuccess={handleGoogleSuccess}
           onError={handleGoogleError}
           isLoading={isGoogleLoading}
           disabled={isLoading}
-        />
+        /> */}
 
         {/* Navigation to Register */}
-        <div className="mt-6 text-center text-sm sm:text-base text-brand-dark/75 border-t border-brand-primary/20 pt-4">
+        {/* <div className="mt-6 text-center text-sm sm:text-base text-brand-dark/75 border-t border-brand-primary/20 pt-4">
           Don't have an account?{' '}
           <Link
             to="/register"
@@ -153,7 +153,7 @@ export const Login = () => {
           >
             Sign up now
           </Link>
-        </div>
+        </div> */}
       </div>
     </div>
   );
