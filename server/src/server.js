@@ -15,11 +15,7 @@ connectDB();
 const app = express();
 
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "https://musharaf-worklog.netlify.app",
-    "https://nxtwaveworklog.netlify.app",
-  ],
+  origin: ["http://localhost:5173", "https://nxtwaveworklog.netlify.app"],
 };
 
 app.use(cors(corsOptions));
