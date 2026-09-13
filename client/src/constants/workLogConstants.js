@@ -17,7 +17,6 @@ export const ACTIVITY_TYPES = [
   "Interview",
   "Doubt Clarification",
   "Mentoring Session",
-  "Mentoring",
   "Project Review",
   "Lab",
   "Meeting",

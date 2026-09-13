@@ -9,6 +9,7 @@ import WeeklyReport from '../pages/WeeklyReport';
 import MonthlyReport from '../pages/MonthlyReport';
 import Profile from '../pages/Profile';
 import ManagerView from '../pages/ManagerView';
+import MentorLogs from '../pages/MentorLogs';
 import NotFound from '../pages/NotFound';
 
 export const AppRoutes = () => {
@@ -37,6 +38,7 @@ export const AppRoutes = () => {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/worklogs" element={<DailyLogs />} />
+        <Route path="/mentor-logs" element={<MentorLogs />} />
         <Route path="/reports/weekly" element={<WeeklyReport />} />
         <Route path="/reports/monthly" element={<MonthlyReport />} />
         <Route path="/profile" element={<Profile />} />

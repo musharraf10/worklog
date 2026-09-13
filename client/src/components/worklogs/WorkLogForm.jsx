@@ -158,7 +158,7 @@ export const WorkLogForm = ({ onSubmit, isLoading = false, initialDate }) => {
 
       {isExpanded && (
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-[150px_minmax(0,1fr)] gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <Input
                 label="Date"
@@ -170,6 +170,31 @@ export const WorkLogForm = ({ onSubmit, isLoading = false, initialDate }) => {
                 required
               />
             </div>
+            <div>
+              <Input
+                label="Time From"
+                type="time"
+                name="timeFrom"
+                value={formData.timeFrom}
+                onChange={handleChange}
+                error={errors.timeFrom}
+                required
+              />
+            </div>
+            <div>
+              <Input
+                label="Time To"
+                type="time"
+                name="timeTo"
+                value={formData.timeTo}
+                onChange={handleChange}
+                error={errors.timeTo}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(190px,1fr)] items-end">
             <div className="min-w-0">
               <Input
                 label="Task Description"
@@ -180,6 +205,12 @@ export const WorkLogForm = ({ onSubmit, isLoading = false, initialDate }) => {
                 error={errors.task}
                 required
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold text-brand-dark tracking-wide">Spent Time</span>
+              <div className={`h-[46px] px-4 flex items-center rounded-lg border text-base font-bold transition-colors ${calculatedMinutes > 0 ? 'bg-brand-soft/60 border-brand-primary text-brand-dark' : 'bg-brand-light border-brand-dark/20 text-brand-dark/50'}`}>
+                {calculatedMinutes > 0 ? <span className="flex items-center gap-2"><svg className="w-5 h-5 text-brand-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{formatMinutes(calculatedMinutes)}</span> : '--'}
+              </div>
             </div>
           </div>
 
@@ -249,54 +280,7 @@ export const WorkLogForm = ({ onSubmit, isLoading = false, initialDate }) => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 items-end">
-            <div>
-              <Input
-                label="Time From"
-                type="time"
-                name="timeFrom"
-                value={formData.timeFrom}
-                onChange={handleChange}
-                error={errors.timeFrom}
-                required
-              />
-            </div>
-            <div>
-              <Input
-                label="Time To"
-                type="time"
-                name="timeTo"
-                value={formData.timeTo}
-                onChange={handleChange}
-                error={errors.timeTo}
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-brand-dark tracking-wide">
-                Spent Time
-              </span>
-              <div
-                className={`h-[46px] px-4 flex items-center rounded-lg border text-base font-bold transition-colors ${
-                  calculatedMinutes > 0
-                    ? 'bg-brand-soft/60 border-brand-primary text-brand-dark'
-                    : 'bg-brand-light border-brand-dark/20 text-brand-dark/50'
-                }`}
-              >
-                {calculatedMinutes > 0 ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-brand-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {formatMinutes(calculatedMinutes)}
-                  </span>
-                ) : (
-                  '--'
-                )}
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 items-end">
             <div>
               <Select
                 label="Status"

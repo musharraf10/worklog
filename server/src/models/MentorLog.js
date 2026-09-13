@@ -97,7 +97,7 @@ const mentorLogSchema = new mongoose.Schema(
 );
 
 // Automatically calculate summary counters before saving
-mentorLogSchema.pre("save", function (next) {
+mentorLogSchema.pre("save", function () {
   if (Array.isArray(this.questions)) {
     this.totalQuestions = this.questions.length;
     this.solvedQuestions = this.questions.filter(
@@ -107,7 +107,6 @@ mentorLogSchema.pre("save", function (next) {
       (q) => q.status === "Carry Forward",
     ).length;
   }
-  next();
 });
 
 module.exports = mongoose.model("MentorLog", mentorLogSchema);

@@ -24,6 +24,15 @@ export const Sidebar = ({ onClose, isCollapsed = false, onToggleCollapse }) => {
       ),
     },
     {
+      label: 'Mentor Logs',
+      path: '/mentor-logs',
+      icon: (
+        <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6a3 3 0 100 6 3 3 0 000-6zm0 0c-4.418 0-8 2.239-8 5v2h16v-2c0-2.761-3.582-5-8-5zm6 9v2m-3-2v2" />
+        </svg>
+      ),
+    },
+    {
       label: 'Manager View',
       path: '/manager-view',
       icon: (

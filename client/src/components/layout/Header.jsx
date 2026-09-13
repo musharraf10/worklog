@@ -5,6 +5,7 @@ import SyncStatus from '../worklogs/SyncStatus';
 const PAGE_TITLES = {
   '/dashboard': 'Dashboard',
   '/worklogs': 'Work Logs',
+  '/mentor-logs': 'Mentor Logs',
   '/reports/weekly': 'Weekly Summary Report',
   '/reports/monthly': 'Monthly Summary Report',
   '/profile': 'My Profile',
