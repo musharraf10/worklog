@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useMemo, useEffect } from 'react';
 import Input from '../common/Input';
 import Select from '../common/Select';
 import Button from '../common/Button';
@@ -12,7 +13,7 @@ import {
 import { getTodayDateString } from '../../utils/dateUtils';
 import { calculateSpentMinutes, formatMinutes } from '../../utils/timeUtils';
 
-export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
+export const WorkLogForm = ({ onSubmit, isLoading = false, initialDate }) => {
   const [formData, setFormData] = useState({
     ...DEFAULT_WORK_LOG,
     date: getTodayDateString(),
@@ -22,6 +23,10 @@ export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
 
   const [errors, setErrors] = useState({});
   const [isExpanded, setIsExpanded] = useState(true);
+
+  useEffect(() => {
+    if (initialDate) setFormData((previous) => ({ ...previous, date: initialDate }));
+  }, [initialDate]);
 
   // Live spent time calculation
   const calculatedMinutes = useMemo(() => {
@@ -128,8 +133,8 @@ export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
   };
 
   return (
-    <div className="bg-brand-light border border-brand-primary/30 rounded-2xl p-6 sm:p-7 shadow-xs">
-      <div className="flex items-center justify-between pb-4 mb-5 border-b border-brand-primary/20">
+    <div className="bg-brand-light border border-brand-primary/30 rounded-2xl p-4 shadow-xs sm:p-6">
+      <div className="flex items-start justify-between gap-3 pb-4 mb-5 border-b border-brand-primary/20">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-brand-soft flex items-center justify-center text-brand-dark shadow-xs">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -137,15 +142,15 @@ export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
             </svg>
           </div>
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-brand-dark">Add New Work Log</h2>
-            <p className="text-sm text-brand-dark/75 mt-0.5">Record a task entry directly into your log</p>
+            <h2 className="text-lg font-bold text-brand-dark">Add work log</h2>
+            <p className="text-sm text-brand-dark/70 mt-0.5">Record this entry for the selected day.</p>
           </div>
         </div>
 
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-sm font-semibold text-brand-dark/80 hover:text-brand-dark px-3.5 py-1.5 rounded-lg bg-brand-soft/40 hover:bg-brand-soft/70 transition-colors"
+          className="shrink-0 text-sm font-semibold text-brand-dark/80 hover:text-brand-dark px-3 py-1.5 rounded-lg bg-brand-soft/40 hover:bg-brand-soft/70 transition-colors"
         >
           {isExpanded ? 'Collapse' : 'Expand Form'}
         </button>
@@ -153,7 +158,7 @@ export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
 
       {isExpanded && (
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[150px_minmax(0,1fr)] gap-3">
             <div>
               <Input
                 label="Date"
@@ -165,7 +170,7 @@ export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
                 required
               />
             </div>
-            <div className="md:col-span-2">
+            <div className="min-w-0">
               <Input
                 label="Task Description"
                 name="task"
@@ -178,7 +183,7 @@ export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Select
                 label="Category"
@@ -244,7 +249,7 @@ export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 items-end">
             <div>
               <Input
                 label="Time From"
@@ -301,7 +306,7 @@ export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
                 onChange={handleChange}
               />
             </div>
-            <div>
+            <div className="sm:col-span-2 lg:col-span-1">
               <Select
                 label="Priority"
                 name="priority"
@@ -326,11 +331,12 @@ export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-brand-primary/20">
+          <div className="flex flex-col-reverse gap-3 pt-3 border-t border-brand-primary/20 sm:flex-row sm:items-center sm:justify-end">
             <Button
               type="button"
               variant="outline"
               size="md"
+              className="w-full sm:w-auto"
               onClick={handleReset}
               disabled={isLoading}
             >
@@ -340,6 +346,7 @@ export const WorkLogForm = ({ onSubmit, isLoading = false }) => {
               type="submit"
               variant="primary"
               size="md"
+              className="w-full sm:w-auto"
               isLoading={isLoading}
             >
               Add Work Log

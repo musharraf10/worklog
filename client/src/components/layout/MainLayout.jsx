@@ -59,7 +59,7 @@ export const MainLayout = () => {
         </div>
 
         {/* Scrollable Page Content */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 focus:outline-none">
+        <main className="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 focus:outline-none">
           <div className="max-w-7xl mx-auto space-y-6">
             <Outlet />
           </div>

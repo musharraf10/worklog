@@ -145,18 +145,19 @@ export const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-brand-light border border-brand-primary/25 rounded-2xl p-6 shadow-xs text-left">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-brand-light border border-brand-primary/25 rounded-2xl p-4 shadow-xs sm:p-6 text-left">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-brand-dark tracking-tight">Dashboard</h2>
-          <p className="text-sm sm:text-base text-brand-dark/75 mt-1.5">
+          <p className="text-sm sm:text-base text-brand-dark/75 mt-1.5 max-w-xl">
             Track, review, and sync your work entries in one place.
           </p>
         </div>
-        <Link to="/worklogs">
+        <Link to="/worklogs" className="w-full sm:w-auto">
           <Button
             variant="primary"
             size="md"
+            className="w-full sm:w-auto"
             icon={
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -168,7 +169,7 @@ export const Dashboard = () => {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           title="Today's Worked Time"
           value={stats.todayHoursStr}

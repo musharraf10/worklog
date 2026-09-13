@@ -3,6 +3,8 @@ import SummaryCard from '../components/reports/SummaryCard';
 import TimeSummary from '../components/reports/TimeSummary';
 import CategoryBreakdown from '../components/reports/CategoryBreakdown';
 import ActivityBreakdown from '../components/reports/ActivityBreakdown';
+import ReportInsights from '../components/reports/ReportInsights';
+import MonthlyCalendarHeatmap from '../components/reports/MonthlyCalendarHeatmap';
 import MentorMonthlyReport from '../components/reports/MentorMonthlyReport';
 import Loader from '../components/common/Loader';
 import reportService from '../services/reportService';
@@ -163,6 +165,14 @@ export const MonthlyReport = () => {
                 totalTasks={reportData.totalTasks || 0}
                 totalWorkedHours={reportData.totalWorkedHours || '0m'}
                 activeDays={reportData.dailySummary?.length || 0}
+              />
+
+              <ReportInsights reportData={reportData} />
+
+              <MonthlyCalendarHeatmap
+                year={year}
+                month={month}
+                dailyData={reportData.dailySummary || []}
               />
 
               <TimeSummary dailyData={reportData.dailySummary || []} />

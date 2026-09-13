@@ -1,368 +1,64 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useEffect, useMemo, useRef, useState } from 'react';
 import WorkLogForm from '../components/worklogs/WorkLogForm';
-import WorkLogTable from '../components/worklogs/WorkLogTable';
-import WorkLogFilters from '../components/worklogs/WorkLogFilters';
-import MentorLogView from '../components/mentorlogs/MentorLogView';
+import WorkLogsCalendar from '../components/worklogs/WorkLogsCalendar';
+import WorkLogGroup from '../components/worklogs/WorkLogGroup';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import Loader from '../components/common/Loader';
-import EmptyState from '../components/common/EmptyState';
 import { subscribeToLogsUpdated } from '../utils/storageUtils';
 import workLogService from '../services/workLogService';
-import { formatDateForInput } from '../utils/dateUtils';
-import { formatMinutes } from '../utils/timeUtils';
-import { CATEGORIES } from '../constants/workLogConstants';
+import { addDays, formatDateForInput, formatGroupDate, getTodayDateString } from '../utils/dateUtils';
+import { formatDisplayTime, formatMinutes } from '../utils/timeUtils';
+import { useAuth } from '../hooks/useAuth';
 
-export const DailyLogs = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const rawTab = searchParams.get('tab');
-  const activeTab =
-    rawTab === 'worklog' || rawTab === 'mentorlog'
-      ? rawTab
-      : localStorage.getItem('daily_logs_active_tab') || 'worklog';
-
-  const handleTabChange = (newTab) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('tab', newTab);
-      return next;
-    });
-    localStorage.setItem('daily_logs_active_tab', newTab);
-  };
-
-  const [logs, setLogs] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [activeDateKey, setActiveDateKey] = useState(null);
-
-  // Filters state
-  const [filters, setFilters] = useState({
-    search: '',
-    date: '',
-    category: '',
-    status: '',
-    priority: '',
-  });
-
-  // Delete modal state
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Fetch all logs
-  const loadLogs = useCallback(async () => {
-    try {
-      const response = await workLogService.getAllWorkLogs();
-      setLogs(response.data || []);
-    } catch (err) {
-      console.error('Error loading work logs:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    const fetchLogs = async () => {
-      try {
-        const response = await workLogService.getAllWorkLogs();
-        if (!isCancelled) {
-          setLogs(response.data || []);
-        }
-      } catch (err) {
-        console.error('Error loading work logs:', err);
-      } finally {
-        if (!isCancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchLogs();
-
-    // Real-time reactivity: re-fetch logs when background sync or storage updates complete
-    const unsubscribe = subscribeToLogsUpdated(() => {
-      if (!isCancelled) {
-        fetchLogs();
-      }
-    });
-
-    return () => {
-      isCancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
-  // Inline Form Submission (NO modal!)
-  const handleCreateWorkLog = async (formData) => {
-    setIsSubmitting(true);
-    try {
-      const result = await workLogService.createWorkLog(formData);
-      if (formData.date) {
-        setActiveDateKey(formData.date);
-      }
-      if (result?.isLocal) {
-        setFeedbackMessage({
-          type: 'info',
-          text: 'Saved locally — syncing when online',
-        });
-      } else {
-        setFeedbackMessage({
-          type: 'success',
-          text: 'Saved',
-        });
-      }
-      await loadLogs();
-    } catch (err) {
-      setFeedbackMessage({
-        type: 'error',
-        text: err.response?.data?.message || err.message || 'Sync failed — will retry',
-      });
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setFeedbackMessage(null), 4000);
-    }
-  };
-
-  // In-Place Save (NO modal, NO page navigation!)
-  const handleSaveEdit = async (id, updatedData) => {
-    try {
-      const result = await workLogService.updateWorkLog(id, updatedData);
-      if (updatedData.date) {
-        setActiveDateKey(updatedData.date);
-      }
-      if (result?.isLocal) {
-        setFeedbackMessage({
-          type: 'info',
-          text: 'Saved locally — syncing when online',
-        });
-      } else {
-        setFeedbackMessage({
-          type: 'success',
-          text: 'Saved',
-        });
-      }
-      await loadLogs();
-    } catch (err) {
-      setFeedbackMessage({
-        type: 'error',
-        text: err.response?.data?.message || err.message || 'Sync failed — will retry',
-      });
-    } finally {
-      setTimeout(() => setFeedbackMessage(null), 4000);
-    }
-  };
-
-  const handleDeleteClick = (log) => {
-    setDeleteTarget(log);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deleteTarget) return;
-    const target = deleteTarget;
-    setIsDeleting(true);
-    try {
-      // Optimistically remove from UI state and close modal immediately
-      setLogs((prev) => prev.filter((l) => l._id !== target._id));
-      setDeleteTarget(null);
-
-      await workLogService.deleteWorkLog(target._id);
-      await loadLogs();
-      setFeedbackMessage({
-        type: 'info',
-        text: 'Deleted',
-      });
-      setTimeout(() => setFeedbackMessage(null), 3000);
-    } catch (err) {
-      console.error('Delete failed:', err);
-      await loadLogs();
-      setFeedbackMessage({
-        type: 'error',
-        text: err.response?.data?.message || err.message || 'Delete failed — please retry',
-      });
-      setTimeout(() => setFeedbackMessage(null), 3000);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
-      if (filters.search) {
-        const query = filters.search.toLowerCase();
-        const taskMatch = log.task?.toLowerCase().includes(query);
-        const remarksMatch = log.remarks?.toLowerCase().includes(query);
-        const sectionMatch = log.hallSection?.toLowerCase().includes(query);
-        if (!taskMatch && !remarksMatch && !sectionMatch) return false;
-      }
-
-      if (filters.date) {
-        const logDateStr = formatDateForInput(log.date);
-        if (logDateStr !== filters.date) return false;
-      }
-
-      if (filters.category && log.category !== filters.category) {
-        return false;
-      }
-
-      if (filters.status && log.status !== filters.status) {
-        return false;
-      }
-
-      if (filters.priority && log.priority !== filters.priority) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [logs, filters]);
-
-  const totalFilteredMinutes = useMemo(() => {
-    return filteredLogs.reduce((acc, log) => acc + (log.spentMinutes || 0), 0);
-  }, [filteredLogs]);
-
-  const categoryOptions = useMemo(() => {
-    const customCats = logs
-      .map((l) => l.category)
-      .filter((c) => c && !CATEGORIES.includes(c));
-    return [...CATEGORIES, ...Array.from(new Set(customCats))];
-  }, [logs]);
-
-  return (
-    <div className="space-y-6 text-left">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-brand-dark tracking-tight">
-            {activeTab === 'mentorlog' ? 'Mentor Logs' : 'Work Logs'}
-          </h2>
-          <p className="text-sm sm:text-base text-brand-dark/75 mt-1">
-            {activeTab === 'mentorlog'
-              ? 'Record detailed student mentoring sessions and question logs linked to your actual work logs.'
-              : 'Create entries using the inline form and manage them with in-place editing.'}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
-          {/* Segmented Control [ WORK LOG ] [ MENTOR LOG ] */}
-          <div className="inline-flex items-center p-1 bg-brand-soft/60 rounded-xl border border-brand-primary/40 shadow-xs">
-            <button
-              type="button"
-              onClick={() => handleTabChange('worklog')}
-              className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${activeTab === 'worklog'
-                  ? 'bg-brand-primary text-brand-dark shadow-xs'
-                  : 'text-brand-dark/70 hover:text-brand-dark'
-                }`}
-            >
-              WORK LOG
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTabChange('mentorlog')}
-              className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${activeTab === 'mentorlog'
-                  ? 'bg-brand-primary text-brand-dark shadow-xs'
-                  : 'text-brand-dark/70 hover:text-brand-dark'
-                }`}
-            >
-              MENTOR LOG
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {activeTab === 'mentorlog' ? (
-        <MentorLogView />
-      ) : (
-        <>
-          {feedbackMessage && (
-            <div
-              className={`p-4 rounded-xl border text-sm sm:text-base font-semibold flex items-center justify-between transition-all duration-200 ${feedbackMessage.type === 'error'
-                  ? 'bg-brand-soft border-brand-dark/30 text-brand-dark'
-                  : 'bg-brand-soft/60 border-brand-primary text-brand-dark'
-                }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <svg className="w-5 h-5 text-brand-dark shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{feedbackMessage.text}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setFeedbackMessage(null)}
-                className="text-brand-dark/60 hover:text-brand-dark p-1 rounded-md"
-              >
-                ✕
-              </button>
-            </div>
-          )}
-
-          {/* Inline Form (No Modal!) */}
-          <WorkLogForm onSubmit={handleCreateWorkLog} isLoading={isSubmitting} />
-
-          {/* Filters */}
-          <WorkLogFilters
-            filters={filters}
-            onChange={setFilters}
-            categoryOptions={categoryOptions}
-            onReset={() =>
-              setFilters({
-                search: '',
-                date: '',
-                category: '',
-                status: '',
-                priority: '',
-              })
-            }
-          />
-
-          {/* Metrics Row */}
-          <div className="flex items-center justify-between px-1 text-sm sm:text-base text-brand-dark/80 font-medium">
-            <span>
-              Showing <strong className="text-brand-dark font-bold">{filteredLogs.length}</strong>{' '}
-              {filteredLogs.length === 1 ? 'log' : 'logs'}
-            </span>
-            <span>
-              Total Time:{' '}
-              <strong className="text-brand-dark font-bold">
-                {formatMinutes(totalFilteredMinutes)}
-              </strong>
-            </span>
-          </div>
-
-          {/* Work Logs List with In-Place Editing */}
-          {isLoading ? (
-            <Loader text="Loading work logs..." />
-          ) : filteredLogs.length === 0 ? (
-            <EmptyState
-              title="No work logs found"
-              description="Try adjusting your search criteria or add a new work log above."
-            />
-          ) : (
-            <WorkLogTable
-              logs={filteredLogs}
-              activeDateKey={activeDateKey}
-              onSave={handleSaveEdit}
-              onDelete={handleDeleteClick}
-            />
-          )}
-
-          {/* Delete Confirmation Modal (Modal ONLY for confirmation) */}
-          <ConfirmDialog
-            isOpen={Boolean(deleteTarget)}
-            onClose={() => setDeleteTarget(null)}
-            onConfirm={handleConfirmDelete}
-            title="Delete Work Log"
-            message={`Are you sure you want to delete the work log "${deleteTarget?.task}"? This action cannot be undone.`}
-            confirmText="Delete"
-            cancelText="Cancel"
-            isLoading={isDeleting}
-            variant="danger"
-          />
-        </>
-      )}
+const DaySummary = ({ selectedDate, selectedLogs, total, completed, active, pending, onAddLog, onSave, onDelete }) => (
+  <section className="rounded-2xl border border-brand-primary/25 bg-brand-light p-4 shadow-xs sm:p-6">
+    <div className="flex flex-wrap items-end justify-between gap-3 border-b border-brand-primary/20 pb-5">
+      <div><p className="text-xs font-semibold uppercase tracking-[.12em] text-brand-dark/60">Selected day</p><h2 className="mt-1 text-2xl font-bold leading-tight tracking-tight text-brand-dark sm:text-[1.65rem]">{formatGroupDate(selectedDate)}</h2><p className="mt-1 text-sm font-medium text-brand-dark/65">{new Date(`${selectedDate}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long' })}</p></div>
+      <p className="text-sm font-bold text-brand-dark">{selectedLogs.length} {selectedLogs.length === 1 ? 'task' : 'tasks'} <span className="mx-2 text-brand-dark/30">|</span> {formatMinutes(total)}</p>
     </div>
-  );
+    <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">{[['Total time', formatMinutes(total)], ['Completed', completed], ['In progress', active], ['Pending', pending]].map(([label, value]) => <div key={label} className="rounded-xl border border-brand-primary/15 bg-brand-soft/25 p-3"><p className="text-xs font-semibold text-brand-dark/60">{label}</p><p className="mt-1 text-xl font-bold text-brand-dark">{value}</p></div>)}</div>
+    <div className="mt-6"><h3 className="mb-3 text-lg font-bold text-brand-dark">Work entries</h3>{selectedLogs.length ? <WorkLogGroup group={{ dateKey: selectedDate, formattedDate: formatGroupDate(selectedDate), isToday: selectedDate === getTodayDateString(), isYesterday: false, totalMinutes: total, totalHoursStr: formatMinutes(total), taskCount: selectedLogs.length, tasks: selectedLogs }} isExpanded onSave={onSave} onDelete={onDelete} /> : <div className="border-y border-brand-primary/15 py-14 text-center"><h3 className="font-bold text-brand-dark">No work logged for this day</h3><p className="mt-2 text-sm text-brand-dark/70">You haven’t recorded any work for {formatGroupDate(selectedDate)} yet.</p><button onClick={onAddLog} className="mt-5 rounded-lg bg-brand-dark px-4 py-2 text-sm font-bold text-brand-light">+ Add work log</button></div>}</div>
+  </section>
+);
+
+const TodayTimeline = ({ logs }) => (
+  <section className="rounded-2xl border border-brand-primary/25 bg-brand-light p-4 shadow-xs sm:p-5">
+    <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.12em] text-brand-primary">Today at a glance</p><h2 className="mt-1 text-lg font-bold text-brand-dark">Today’s task timeline</h2></div><span className="rounded-full bg-brand-soft px-3 py-1 text-sm font-bold text-brand-dark">{logs.length} {logs.length === 1 ? 'task' : 'tasks'}</span></div>
+    {logs.length ? <div className="relative mt-5 space-y-4 before:absolute before:bottom-2 before:left-[13px] before:top-2 before:w-px before:bg-brand-primary/25">{logs.map(log => <div key={log._id} className="relative flex gap-3"><span className="relative z-10 mt-1 h-[27px] w-[27px] shrink-0 rounded-full border-[5px] border-brand-light bg-brand-primary"/><div className="min-w-0 flex-1 rounded-xl bg-brand-soft/25 px-3 py-2.5"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold text-brand-dark">{log.task}</p><span className="text-xs font-bold text-brand-dark/70">{formatDisplayTime(log.timeFrom)} – {formatDisplayTime(log.timeTo)}</span></div><p className="mt-1 text-sm text-brand-dark/65">{log.category} · {log.activityType} · {formatMinutes(log.spentMinutes)}</p></div></div>)}</div> : <div className="mt-5 rounded-xl border border-dashed border-brand-primary/25 py-8 text-center text-sm text-brand-dark/65">No tasks logged today yet. Your new entries will appear here.</div>}
+  </section>
+);
+
+const DateStrip = ({ selectedDate, onSelectDate, onOpenCalendar, onToday }) => {
+  const today = getTodayDateString();
+  const dates = Array.from({ length: 21 }, (_, index) => addDays(today, index - 10));
+  return <section className="rounded-2xl border border-brand-primary/25 bg-brand-light p-3 shadow-xs sm:p-4"><div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.12em] text-brand-primary">Browse dates</p><p className="mt-0.5 text-sm text-brand-dark/70">Scroll to select a day</p></div><div className="flex shrink-0 items-center gap-2"><button type="button" onClick={onToday} className="rounded-lg bg-brand-dark px-3 py-2 text-sm font-semibold text-brand-light hover:bg-brand-dark/90">Today</button><button type="button" onClick={onOpenCalendar} className="inline-flex items-center gap-2 rounded-lg border border-brand-dark/20 bg-brand-soft/40 px-3 py-2 text-sm font-semibold text-brand-dark hover:bg-brand-soft"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><span className="hidden sm:inline">Calendar</span></button></div></div><div className="date-strip flex gap-2 overflow-x-auto pb-2">{dates.map(date => { const dateObj = new Date(`${date}T00:00:00`); const active = date === selectedDate; return <button type="button" key={date} onClick={() => onSelectDate(date)} aria-pressed={active} className={`min-w-[62px] rounded-xl border px-2 py-2 text-center transition ${active ? 'border-brand-dark bg-brand-dark text-brand-light shadow-sm' : 'border-brand-primary/20 bg-brand-soft/20 text-brand-dark hover:bg-brand-soft/60'}`}><span className="block text-[11px] font-bold uppercase">{dateObj.toLocaleDateString(undefined, { weekday: 'short' })}</span><span className="mt-0.5 block text-lg font-bold">{dateObj.getDate()}</span><span className="block text-[10px] opacity-70">{date === today ? 'Today' : dateObj.toLocaleDateString(undefined, { month: 'short' })}</span></button>; })}</div></section>;
 };
 
-export default DailyLogs;
+const FloatingCalendar = ({ month, selectedDate, logs, onMonthChange, onSelectDate, onClose }) => {
+  const [position, setPosition] = useState({ x: 24, y: 88 }); const drag = useRef(null);
+  useEffect(() => { const move = event => { if (!drag.current) return; setPosition({ x: Math.max(8, event.clientX - drag.current.x), y: Math.max(8, event.clientY - drag.current.y) }); }; const end = () => { drag.current = null; }; window.addEventListener('pointermove', move); window.addEventListener('pointerup', end); return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', end); }; }, []);
+  return <aside className="floating-calendar fixed z-50 min-h-[320px] min-w-[280px] max-w-[calc(100vw-1rem)] overflow-auto rounded-2xl border border-brand-primary/35 bg-brand-light p-3 shadow-2xl sm:p-4" style={{ left: position.x, top: position.y, width: 'min(380px, calc(100vw - 1rem))' }} role="dialog" aria-label="Floating calendar"><div className="mb-2 flex cursor-move items-center justify-between gap-3 rounded-lg bg-brand-soft/45 px-2 py-1.5 touch-none" onPointerDown={event => { if (event.target.closest('button')) return; drag.current = { x: event.clientX - position.x, y: event.clientY - position.y }; }}><span className="text-xs font-bold uppercase tracking-[.12em] text-brand-dark/70">Drag calendar</span><button type="button" onClick={onClose} aria-label="Hide calendar" className="rounded-md p-1 text-brand-dark/70 hover:bg-brand-light hover:text-brand-dark"><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18 18 6M6 6l12 12" /></svg></button></div><WorkLogsCalendar month={month} selectedDate={selectedDate} logs={logs} onMonthChange={onMonthChange} onSelectDate={onSelectDate}/></aside>;
+};
+
+export default function DailyLogs() {
+  const today = getTodayDateString();
+  const [logs, setLogs] = useState([]); const [selectedDate, setSelectedDate] = useState(today); const [month, setMonth] = useState(new Date(`${today}T00:00:00`));
+  const [view, setView] = useState('form'); const [calendarOpen, setCalendarOpen] = useState(false); const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false); const [deleting, setDeleting] = useState(null); const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const { syncStatus, pendingCount } = useAuth();
+  const load = async () => { setError(''); try { const response = await workLogService.getAllWorkLogs(); setLogs(response.data || []); } catch (err) { setError(err.response?.data?.message || 'Unable to load work logs.'); } finally { setLoading(false); } };
+  useEffect(() => { load(); return subscribeToLogsUpdated(load); }, []);
+  const selectedLogs = useMemo(() => logs.filter(log => formatDateForInput(log.date) === selectedDate).sort((a, b) => (a.timeFrom || '').localeCompare(b.timeFrom || '')), [logs, selectedDate]);
+  const total = selectedLogs.reduce((sum, log) => sum + (log.spentMinutes || 0), 0); const completed = selectedLogs.filter(log => log.status === 'Completed').length; const active = selectedLogs.filter(log => log.status === 'In Progress').length; const pending = selectedLogs.filter(log => ['Yet to Start', 'On Hold', 'Carry Forward', 'Not Done'].includes(log.status)).length;
+  const create = async data => { setSaving(true); try { const result = await workLogService.createWorkLog(data); setSelectedDate(data.date); setMonth(new Date(`${data.date}T00:00:00`)); setNotice(result?.isLocal ? 'Saved locally — syncing when online' : 'Work log saved'); await load(); } catch (err) { setNotice(err.response?.data?.message || 'Unable to save work log'); } finally { setSaving(false); } };
+  const update = async (id, data) => { try { await workLogService.updateWorkLog(id, data); setNotice('Work log updated'); await load(); } catch (err) { setNotice(err.response?.data?.message || 'Unable to update work log'); throw err; } };
+  const remove = async () => { try { await workLogService.deleteWorkLog(deleting._id); setNotice('Work log deleted'); setDeleting(null); await load(); } catch (err) { setNotice(err.response?.data?.message || 'Unable to delete work log'); } };
+  const statusText = syncStatus === 'failed' ? 'Sync failed' : syncStatus === 'pending' ? 'Pending' : syncStatus === 'syncing' ? 'Syncing' : 'Synced';
+  if (loading) return <div className="animate-pulse"><div className="h-8 w-44 rounded bg-brand-soft"/><div className="mt-7 h-[500px] rounded-2xl bg-brand-soft/40"/></div>;
+  if (error) return <section className="py-16 text-center" role="alert"><h1 className="text-xl font-bold text-brand-dark">Unable to load work logs</h1><p className="mt-2 text-brand-dark/70">{error}</p><button onClick={() => { setLoading(true); load(); }} className="mt-5 rounded-lg bg-brand-dark px-4 py-2 text-sm font-bold text-brand-light">Retry</button></section>;
+  return <div className="space-y-5 sm:space-y-6">
+    <header className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-brand-primary/20 bg-brand-light p-4 shadow-xs sm:p-6"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-brand-primary">Daily workspace</p><h1 className="mt-1 text-2xl font-bold tracking-tight text-brand-dark sm:text-3xl">{view === 'form' ? 'Log your work' : 'Your work logs'}</h1><p className="mt-1 max-w-xl text-sm text-brand-dark/70 sm:text-base">{view === 'form' ? 'Add a focused record first. Your calendar and previous entries stay one tap away.' : 'Browse any day, review its entries, and return to the form when you are ready.'}</p></div><div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => setView(view === 'form' ? 'logs' : 'form')} className="inline-flex items-center gap-2 rounded-lg border border-brand-dark/20 bg-brand-soft/40 px-3 py-2 text-sm font-semibold text-brand-dark transition hover:bg-brand-soft"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 4h7" /></svg>{view === 'form' ? 'Show logs' : 'Add work log'}</button><span className="rounded-full bg-brand-soft px-3 py-2 text-sm font-semibold text-brand-dark"><i className={`mr-2 inline-block h-2 w-2 rounded-full ${syncStatus === 'failed' ? 'bg-red-500' : syncStatus === 'pending' ? 'bg-amber-500' : 'bg-emerald-600'}`}/>{statusText}{pendingCount ? ` · ${pendingCount}` : ''}</span></div></header>
+    <div className="worklog-flip-stage" aria-live="polite"><div key={view} className="worklog-flip-panel">{view === 'form' ? <div className="mx-auto grid max-w-7xl items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]"><WorkLogForm initialDate={selectedDate} onSubmit={create} isLoading={saving}/><TodayTimeline logs={logs.filter(log => formatDateForInput(log.date) === today).sort((a, b) => (a.timeFrom || '').localeCompare(b.timeFrom || ''))}/></div> : <div className="space-y-5"><DateStrip selectedDate={selectedDate} onSelectDate={date => { setSelectedDate(date); setMonth(new Date(`${date}T00:00:00`)); }} onToday={() => { setSelectedDate(today); setMonth(new Date(`${today}T00:00:00`)); }} onOpenCalendar={() => setCalendarOpen(true)}/><DaySummary selectedDate={selectedDate} selectedLogs={selectedLogs} total={total} completed={completed} active={active} pending={pending} onAddLog={() => setView('form')} onSave={update} onDelete={setDeleting}/></div>}</div></div>
+    {calendarOpen && <FloatingCalendar month={month} selectedDate={selectedDate} logs={logs} onMonthChange={setMonth} onSelectDate={date => { setSelectedDate(date); setMonth(new Date(`${date}T00:00:00`)); }} onClose={() => setCalendarOpen(false)}/>} 
+    {notice && <div role="status" className="fixed bottom-5 right-5 z-40 max-w-[calc(100vw-2.5rem)] rounded-lg bg-brand-dark px-4 py-3 text-sm font-semibold text-brand-light shadow-lg">{notice}<button className="ml-4" onClick={() => setNotice('')} aria-label="Dismiss notification">×</button></div>}
+    <ConfirmDialog isOpen={Boolean(deleting)} onClose={() => setDeleting(null)} onConfirm={remove} title="Delete this work log?" message="This action cannot be undone." confirmText="Delete" variant="danger"/>
+  </div>;
+}

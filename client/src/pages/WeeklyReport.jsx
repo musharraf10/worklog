@@ -3,6 +3,7 @@ import SummaryCard from '../components/reports/SummaryCard';
 import TimeSummary from '../components/reports/TimeSummary';
 import CategoryBreakdown from '../components/reports/CategoryBreakdown';
 import ActivityBreakdown from '../components/reports/ActivityBreakdown';
+import ReportInsights from '../components/reports/ReportInsights';
 import MentorWeeklyReport from '../components/reports/MentorWeeklyReport';
 import Loader from '../components/common/Loader';
 import reportService from '../services/reportService';
@@ -150,6 +151,8 @@ export const WeeklyReport = () => {
                 totalWorkedHours={reportData.totalWorkedHours || '0m'}
                 activeDays={reportData.dailySummary?.length || 0}
               />
+
+              <ReportInsights reportData={reportData} />
 
               <TimeSummary dailyData={reportData.dailySummary || []} />
 

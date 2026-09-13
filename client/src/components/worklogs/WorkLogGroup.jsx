@@ -182,7 +182,7 @@ export const WorkLogGroup = ({
   };
 
   return (
-    <div className="bg-brand-light border border-brand-primary/30 rounded-2xl overflow-hidden shadow-xs text-left mb-6 transition-all">
+    <div className="bg-brand-light border border-brand-primary/25 rounded-xl overflow-hidden shadow-xs text-left mb-4 transition-all">
       {/* Date Accordion Header: Click to view or hide tasks for this date */}
       <button
         type="button"
@@ -192,15 +192,15 @@ export const WorkLogGroup = ({
           isOpen ? 'border-b border-brand-primary/25' : ''
         }`}
       >
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-brand-dark text-brand-light flex items-center justify-center font-bold text-base shrink-0 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-brand-dark text-brand-light flex items-center justify-center font-bold text-base shrink-0 shadow-xs">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h3 className="text-lg sm:text-xl font-bold text-brand-dark tracking-tight">
+              <h3 className="text-base sm:text-lg font-bold text-brand-dark tracking-tight">
                 {group.formattedDate}
               </h3>
               {group.isToday && (
@@ -214,7 +214,7 @@ export const WorkLogGroup = ({
                 </span>
               )}
             </div>
-            <p className="text-sm sm:text-base text-brand-dark/80 mt-1">
+            <p className="text-sm text-brand-dark/70 mt-0.5">
               Total: <strong className="text-brand-dark">{group.totalHoursStr}</strong> |{' '}
               {group.taskCount} {group.taskCount === 1 ? 'task' : 'tasks'}
             </p>
@@ -226,8 +226,8 @@ export const WorkLogGroup = ({
           <span className="hidden sm:inline">
             {isOpen ? 'Hide tasks' : 'View tasks'}
           </span>
-          <div
-            className={`w-8 h-8 rounded-full bg-brand-soft/80 border border-brand-primary/40 flex items-center justify-center transition-transform duration-200 ${
+            <div
+            className={`w-7 h-7 rounded-full bg-brand-soft/80 border border-brand-primary/40 flex items-center justify-center transition-transform duration-200 ${
               isOpen ? 'rotate-180' : ''
             }`}
           >
