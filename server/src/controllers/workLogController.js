@@ -41,7 +41,7 @@ const createWorkLog = async (req, res) => {
 
     let sheetsSynced = false;
     try {
-      await syncNewWorkLog(workLog._id);
+      await syncNewWorkLog(workLog._id, req.user);
       const refreshed = await WorkLog.findById(workLog._id);
       sheetsSynced = refreshed?.googleSheetSyncStatus === "synced";
       return res.status(201).json({
@@ -172,7 +172,7 @@ const updateWorkLog = async (req, res) => {
 
     let sheetsSynced = false;
     try {
-      await syncUpdatedWorkLog(workLog._id);
+      await syncUpdatedWorkLog(workLog._id, req.user);
       const refreshed = await WorkLog.findById(workLog._id);
       sheetsSynced = refreshed?.googleSheetSyncStatus === "synced";
       return res.status(200).json({
@@ -220,7 +220,7 @@ const deleteWorkLog = async (req, res) => {
 
     if (googleSheetRowNumber && googleSheetRowNumber >= 2) {
       try {
-        await syncDeletedWorkLog(googleSheetRowNumber);
+        await syncDeletedWorkLog(req.user._id, req.user, googleSheetRowNumber);
       } catch (err) {
         console.error("Google Sheets delete sync failed:", err.message);
         await WorkLog.findByIdAndUpdate(workLog._id, {
@@ -268,9 +268,9 @@ const retrySheetsSync = async (req, res) => {
     }
 
     if (workLog.googleSheetRowNumber && workLog.googleSheetRowNumber >= 2) {
-      await syncUpdatedWorkLog(workLog._id);
+      await syncUpdatedWorkLog(workLog._id, req.user);
     } else {
-      await syncNewWorkLog(workLog._id);
+      await syncNewWorkLog(workLog._id, req.user);
     }
 
     const refreshed = await WorkLog.findById(workLog._id);

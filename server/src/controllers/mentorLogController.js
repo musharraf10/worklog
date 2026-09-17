@@ -5,6 +5,7 @@ const {
   updateMentorQuestionRow,
   deleteMentorQuestionRow,
 } = require("../services/mentorSheetsService");
+const { getOrCreateUserSpreadsheet } = require("../services/googleSheetsService");
 
 const isMentoringWorkLog = (log) => {
   if (!log) return false;
@@ -157,7 +158,9 @@ const createMentorLog = async (req, res) => {
     let sheetsSynced = false;
     if (mentorLog.questions && mentorLog.questions.length > 0) {
       try {
+        const spreadsheetId = await getOrCreateUserSpreadsheet(req.user);
         const rowResults = await appendMentorQuestionRows(
+          spreadsheetId,
           workLog,
           mentorLog,
           mentorLog.questions,
@@ -296,7 +299,9 @@ const addQuestion = async (req, res) => {
     let sheetsSynced = false;
     if (mentorLog.workLog) {
       try {
+        const spreadsheetId = await getOrCreateUserSpreadsheet(req.user);
         const rowResults = await appendMentorQuestionRows(
+          spreadsheetId,
           mentorLog.workLog,
           mentorLog,
           [createdQuestion],
@@ -382,11 +387,14 @@ const updateQuestion = async (req, res) => {
     let sheetsSynced = false;
     if (mentorLog.workLog) {
       try {
+        const spreadsheetId = await getOrCreateUserSpreadsheet(req.user);
+
         if (
           targetQuestion.googleSheetRowNumber &&
           targetQuestion.googleSheetRowNumber >= 2
         ) {
           await updateMentorQuestionRow(
+            spreadsheetId,
             mentorLog.workLog,
             mentorLog,
             targetQuestion,
@@ -395,6 +403,7 @@ const updateQuestion = async (req, res) => {
           sheetsSynced = true;
         } else {
           const rowResults = await appendMentorQuestionRows(
+            spreadsheetId,
             mentorLog.workLog,
             mentorLog,
             [targetQuestion],
@@ -477,7 +486,8 @@ const deleteQuestion = async (req, res) => {
     // Delete Google Sheets row first if exists
     if (rowNumber && rowNumber >= 2) {
       try {
-        await deleteMentorQuestionRow(rowNumber);
+        const spreadsheetId = await getOrCreateUserSpreadsheet(req.user);
+        await deleteMentorQuestionRow(spreadsheetId, rowNumber, req.user._id);
       } catch (err) {
         console.error("Google Sheets question delete failed:", err.message);
         await MentorLog.updateOne(
@@ -536,16 +546,19 @@ const deleteMentorLog = async (req, res) => {
       .filter((r) => r && r >= 2)
       .sort((a, b) => b - a);
 
-    for (const r of rowNumbers) {
-      try {
-        await deleteMentorQuestionRow(r);
-      } catch (err) {
-        console.error(`Failed to delete sheet row ${r}:`, err.message);
-        return res.status(502).json({
-          success: false,
-          sheetsSynced: false,
-          message: "Failed to delete rows from Google Sheets — will retry",
-        });
+    if (rowNumbers.length > 0) {
+      const spreadsheetId = await getOrCreateUserSpreadsheet(req.user);
+      for (const r of rowNumbers) {
+        try {
+          await deleteMentorQuestionRow(spreadsheetId, r, req.user._id);
+        } catch (err) {
+          console.error(`Failed to delete sheet row ${r}:`, err.message);
+          return res.status(502).json({
+            success: false,
+            sheetsSynced: false,
+            message: "Failed to delete rows from Google Sheets — will retry",
+          });
+        }
       }
     }
 
@@ -588,12 +601,14 @@ const retryMentorSheetsSync = async (req, res) => {
     }
 
     let allSynced = true;
+    const spreadsheetId = await getOrCreateUserSpreadsheet(req.user);
 
     for (const q of mentorLog.questions) {
       if (!q.googleSheetRowNumber || q.googleSheetSyncStatus !== "synced") {
         try {
           if (q.googleSheetRowNumber && q.googleSheetRowNumber >= 2) {
             await updateMentorQuestionRow(
+              spreadsheetId,
               mentorLog.workLog,
               mentorLog,
               q,
@@ -605,6 +620,7 @@ const retryMentorSheetsSync = async (req, res) => {
             );
           } else {
             const results = await appendMentorQuestionRows(
+              spreadsheetId,
               mentorLog.workLog,
               mentorLog,
               [q],

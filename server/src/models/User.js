@@ -40,6 +40,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+
+    spreadsheetId: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   },
   {
     timestamps: true,

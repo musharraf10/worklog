@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const googleClient = require("../config/google");
 const { generateToken } = require("../utils/authUtils");
+const { getOrCreateUserSpreadsheet } = require("../services/googleSheetsService");
 
 //me
 const getMe = async (req, res) => {
@@ -53,6 +54,15 @@ const register = async (req, res) => {
       password: hashedPassword,
       authProvider: "local",
     });
+
+    try {
+      await getOrCreateUserSpreadsheet(user);
+    } catch (sheetErr) {
+      console.error(
+        `Spreadsheet initialization deferred/failed on registration for ${user.email}:`,
+        sheetErr.message,
+      );
+    }
 
     const token = generateToken(user._id);
 
@@ -209,6 +219,15 @@ const googleLogin = async (req, res) => {
         authProvider: "google",
         profilePicture: picture || null,
       });
+
+      try {
+        await getOrCreateUserSpreadsheet(user);
+      } catch (sheetErr) {
+        console.error(
+          `Spreadsheet initialization deferred/failed on Google registration for ${user.email}:`,
+          sheetErr.message,
+        );
+      }
     }
 
     const token = generateToken(user._id);

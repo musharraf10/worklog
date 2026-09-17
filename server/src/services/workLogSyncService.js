@@ -1,12 +1,23 @@
 const WorkLog = require("../models/WorkLog");
+const User = require("../models/User");
 
-const {
-  appendWorkLog,
-  updateWorkLogRow,
-  deleteWorkLogRow,
-} = require("./googleSheetsService");
+const googleSheetsService = require("./googleSheetsService");
 
-const syncNewWorkLog = async (workLogId) => {
+const resolveUser = async (userId, userParam) => {
+  if (userParam && (userParam._id || userParam.id)) {
+    return userParam;
+  }
+  if (!userId) {
+    throw new Error("User identifier is required for Google Sheets sync");
+  }
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error("Authenticated user not found");
+  }
+  return user;
+};
+
+const syncNewWorkLog = async (workLogId, userParam = null) => {
   try {
     const workLog = await WorkLog.findById(workLogId);
 
@@ -14,7 +25,10 @@ const syncNewWorkLog = async (workLogId) => {
       return;
     }
 
-    const response = await appendWorkLog(workLog);
+    const user = await resolveUser(workLog.user, userParam);
+    const spreadsheetId = await googleSheetsService.getOrCreateUserSpreadsheet(user);
+
+    const response = await googleSheetsService.appendWorkLog(spreadsheetId, workLog);
 
     const updatedRange = response.updates?.updatedRange;
 
@@ -44,10 +58,11 @@ const syncNewWorkLog = async (workLogId) => {
       googleSheetSyncStatus: "failed",
       googleSheetSyncError: error.message,
     });
+    throw error;
   }
 };
 
-const syncUpdatedWorkLog = async (workLogId) => {
+const syncUpdatedWorkLog = async (workLogId, userParam = null) => {
   try {
     const workLog = await WorkLog.findById(workLogId);
 
@@ -56,11 +71,14 @@ const syncUpdatedWorkLog = async (workLogId) => {
     }
 
     if (!workLog.googleSheetRowNumber) {
-      await syncNewWorkLog(workLogId);
+      await syncNewWorkLog(workLogId, userParam);
       return;
     }
 
-    await updateWorkLogRow(workLog, workLog.googleSheetRowNumber);
+    const user = await resolveUser(workLog.user, userParam);
+    const spreadsheetId = await googleSheetsService.getOrCreateUserSpreadsheet(user);
+
+    await googleSheetsService.updateWorkLogRow(spreadsheetId, workLog, workLog.googleSheetRowNumber);
 
     await WorkLog.findByIdAndUpdate(workLogId, {
       googleSheetSyncStatus: "synced",
@@ -74,24 +92,30 @@ const syncUpdatedWorkLog = async (workLogId) => {
       googleSheetSyncStatus: "failed",
       googleSheetSyncError: error.message,
     });
+    throw error;
   }
 };
 
-const syncDeletedWorkLog = async (rowNumber) => {
+const syncDeletedWorkLog = async (userId, userParam = null, rowNumber) => {
   try {
     if (!rowNumber || rowNumber < 2) {
       return;
     }
 
-    await deleteWorkLogRow(rowNumber);
+    const user = await resolveUser(userId, userParam);
+    const spreadsheetId = await googleSheetsService.getOrCreateUserSpreadsheet(user);
+
+    await googleSheetsService.deleteWorkLogRow(spreadsheetId, rowNumber);
 
     // When a row is removed, all subsequent rows in Google Sheets shift up by 1
+    // Scoped strictly to this authenticated user!
     await WorkLog.updateMany(
-      { googleSheetRowNumber: { $gt: rowNumber } },
+      { user: userId, googleSheetRowNumber: { $gt: rowNumber } },
       { $inc: { googleSheetRowNumber: -1 } },
     );
   } catch (error) {
     console.error("Google Sheets delete sync failed:", error.message);
+    throw error;
   }
 };
 

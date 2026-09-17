@@ -14,7 +14,7 @@ const MENTOR_SHEET_HEADERS = [
 ];
 
 const getSheetsClient = () => {
-  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(
+  const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(
     /\\n/g,
     "\n",
   );
@@ -22,7 +22,10 @@ const getSheetsClient = () => {
   const auth = new google.auth.JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     key: privateKey,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    scopes: [
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/drive",
+    ],
   });
 
   return google.sheets({
@@ -56,9 +59,12 @@ const formatQuestionRow = (workLog, mentorLog, question) => {
   ];
 };
 
-const ensureMentorSheetHeaderRow = async () => {
+const ensureMentorSheetHeaderRow = async (spreadsheetId) => {
+  if (!spreadsheetId) {
+    throw new Error("Spreadsheet ID is required to ensure mentor sheet header");
+  }
+
   const sheets = getSheetsClient();
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
   const sheetName = getMentorSheetName();
 
   // 1. Check if sheet exists; if not, create it
@@ -142,19 +148,28 @@ const ensureMentorSheetHeaderRow = async () => {
           },
         });
       } catch (err) {
-        console.error("Error setting Mentor Logs date formatting:", err);
+        console.error("Error setting Mentor Logs date formatting:", err.message);
       }
     }
   }
+
+  return sheetName;
 };
 
-const appendMentorQuestionRows = async (workLog, mentorLog, questions = []) => {
+const appendMentorQuestionRows = async (
+  spreadsheetId,
+  workLog,
+  mentorLog,
+  questions = [],
+) => {
+  if (!spreadsheetId) {
+    throw new Error("Spreadsheet ID is required to append mentor question rows");
+  }
+
   if (!questions || questions.length === 0) return [];
 
-  await ensureMentorSheetHeaderRow();
+  const sheetName = await ensureMentorSheetHeaderRow(spreadsheetId);
   const sheets = getSheetsClient();
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-  const sheetName = getMentorSheetName();
 
   const rows = questions.map((q) => formatQuestionRow(workLog, mentorLog, q));
 
@@ -189,17 +204,20 @@ const appendMentorQuestionRows = async (workLog, mentorLog, questions = []) => {
 };
 
 const updateMentorQuestionRow = async (
+  spreadsheetId,
   workLog,
   mentorLog,
   question,
   rowNumber,
 ) => {
+  if (!spreadsheetId) {
+    throw new Error("Spreadsheet ID is required to update mentor question row");
+  }
+
   if (!rowNumber || rowNumber < 2) return null;
 
-  await ensureMentorSheetHeaderRow();
+  const sheetName = await ensureMentorSheetHeaderRow(spreadsheetId);
   const sheets = getSheetsClient();
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-  const sheetName = getMentorSheetName();
 
   const row = formatQuestionRow(workLog, mentorLog, question);
 
@@ -215,11 +233,14 @@ const updateMentorQuestionRow = async (
   return response.data;
 };
 
-const deleteMentorQuestionRow = async (rowNumber) => {
+const deleteMentorQuestionRow = async (spreadsheetId, rowNumber, userId) => {
+  if (!spreadsheetId) {
+    throw new Error("Spreadsheet ID is required to delete mentor question row");
+  }
+
   if (!rowNumber || rowNumber < 2) return;
 
   const sheets = getSheetsClient();
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
   const sheetName = getMentorSheetName();
 
   const metadata = await sheets.spreadsheets.get({
@@ -232,7 +253,7 @@ const deleteMentorQuestionRow = async (rowNumber) => {
   );
 
   if (!sheet) {
-    throw new Error(`Sheet "${sheetName}" not found`);
+    throw new Error(`Sheet "${sheetName}" not found in spreadsheet ${spreadsheetId}`);
   }
 
   const sheetId = sheet.properties.sheetId;
@@ -256,8 +277,14 @@ const deleteMentorQuestionRow = async (rowNumber) => {
   });
 
   // When a row is deleted, all question rows in MongoDB that were below this row shift up by 1
+  // Scoped strictly to this authenticated user!
+  const filter = { "questions.googleSheetRowNumber": { $gt: rowNumber } };
+  if (userId) {
+    filter.user = userId;
+  }
+
   await MentorLog.updateMany(
-    { "questions.googleSheetRowNumber": { $gt: rowNumber } },
+    filter,
     { $inc: { "questions.$[elem].googleSheetRowNumber": -1 } },
     { arrayFilters: [{ "elem.googleSheetRowNumber": { $gt: rowNumber } }] },
   );
