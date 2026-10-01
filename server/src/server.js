@@ -5,6 +5,8 @@ const workLogRoutes = require("./routes/workLogRoutes");
 const authRoutes = require("./routes/authRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const mentorLogRoutes = require("./routes/mentorLogRoutes");
+const shareLinkRoutes = require("./routes/shareLinkRoutes");
+const sharedPortalRoutes = require("./routes/sharedPortalRoutes");
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorMiddleware");
 
@@ -34,6 +36,10 @@ app.use("/api/worklogs/summary", reportRoutes);
 app.use("/api/worklogs", workLogRoutes);
 
 app.use("/api/mentor-logs", mentorLogRoutes);
+
+app.use("/api/share-links", shareLinkRoutes);
+
+app.use("/api/shared", sharedPortalRoutes);
 
 app.use(errorHandler);
 

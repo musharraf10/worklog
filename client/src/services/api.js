@@ -26,9 +26,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Don't intercept 401 on login or register endpoints
+      // Don't intercept 401 on login, register, or shared portal endpoints
       const url = error.config?.url || '';
-      if (!url.includes('/auth/login') && !url.includes('/auth/register')) {
+      if (
+        !url.includes('/auth/login') &&
+        !url.includes('/auth/register') &&
+        !url.includes('/shared')
+      ) {
         clearAuthToken();
         clearStoredUser();
         if (typeof window !== 'undefined') {

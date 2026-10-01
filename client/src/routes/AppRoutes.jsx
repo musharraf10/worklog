@@ -10,6 +10,7 @@ import MonthlyReport from '../pages/MonthlyReport';
 import Profile from '../pages/Profile';
 import ManagerView from '../pages/ManagerView';
 import MentorLogs from '../pages/MentorLogs';
+import SharedPortalLayout from '../pages/shared/SharedPortalLayout';
 import NotFound from '../pages/NotFound';
 
 export const AppRoutes = () => {
@@ -17,6 +18,10 @@ export const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
+      {/* Public Shared Portal (no login required, secured by random token hash) */}
+      <Route path="/shared/:token/*" element={<SharedPortalLayout />} />
+      <Route path="/shared/:token" element={<SharedPortalLayout />} />
 
       {/* Standalone Full-Screen Manager View (no sidebar, no header) */}
       <Route
