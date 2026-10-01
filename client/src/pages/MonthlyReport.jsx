@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import SummaryCard from '../components/reports/SummaryCard';
-import TimeSummary from '../components/reports/TimeSummary';
+import MonthlyInsights from '../components/reports/MonthlyInsights';
+import MonthlyCalendarHeatmap from '../components/reports/MonthlyCalendarHeatmap';
+import DailyWorkedTimeChart from '../components/reports/DailyWorkedTimeChart';
 import CategoryBreakdown from '../components/reports/CategoryBreakdown';
 import ActivityBreakdown from '../components/reports/ActivityBreakdown';
-import ReportInsights from '../components/reports/ReportInsights';
-import MonthlyCalendarHeatmap from '../components/reports/MonthlyCalendarHeatmap';
+import SectionBreakdown from '../components/reports/SectionBreakdown';
+import PriorityBreakdown from '../components/reports/PriorityBreakdown';
+import StatusBreakdown from '../components/reports/StatusBreakdown';
+import TimeSummary from '../components/reports/TimeSummary';
 import MentorMonthlyReport from '../components/reports/MentorMonthlyReport';
 import Loader from '../components/common/Loader';
 import reportService from '../services/reportService';
@@ -161,23 +165,39 @@ export const MonthlyReport = () => {
             </div>
           ) : reportData ? (
             <div className="space-y-6">
+              {/* 1. Monthly Overview KPIs */}
               <SummaryCard
                 totalTasks={reportData.totalTasks || 0}
                 totalWorkedHours={reportData.totalWorkedHours || '0m'}
                 activeDays={reportData.dailySummary?.length || 0}
+                totalWorkedMinutes={reportData.totalWorkedMinutes || 0}
               />
 
-              <ReportInsights reportData={reportData} />
+              {/* 2. Monthly Highlights & Insights */}
+              <MonthlyInsights
+                dailySummary={reportData.dailySummary || []}
+                categorySummary={reportData.categorySummary || []}
+                activitySummary={reportData.activitySummary || []}
+                sectionSummary={reportData.sectionSummary || []}
+                prioritySummary={reportData.prioritySummary || []}
+              />
 
+              {/* 3. Monthly Activity Heatmap */}
               <MonthlyCalendarHeatmap
                 year={year}
                 month={month}
                 dailyData={reportData.dailySummary || []}
               />
 
-              <TimeSummary dailyData={reportData.dailySummary || []} />
+              {/* 4. Daily Worked Time Bar Chart */}
+              <DailyWorkedTimeChart
+                year={year}
+                month={month}
+                dailyData={reportData.dailySummary || []}
+              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 5. 2-Column: Category Breakdown & Activity Breakdown */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <CategoryBreakdown
                   categories={reportData.categorySummary || []}
                   totalWorkedMinutes={reportData.totalWorkedMinutes || 0}
@@ -186,6 +206,28 @@ export const MonthlyReport = () => {
                   activities={reportData.activitySummary || []}
                   totalWorkedMinutes={reportData.totalWorkedMinutes || 0}
                 />
+              </div>
+
+              {/* 6. 2-Column: Hall / Section Breakdown & Priority Breakdown */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <SectionBreakdown
+                  sections={reportData.sectionSummary || []}
+                  totalWorkedMinutes={reportData.totalWorkedMinutes || 0}
+                />
+                <PriorityBreakdown
+                  priorities={reportData.prioritySummary || []}
+                  totalWorkedMinutes={reportData.totalWorkedMinutes || 0}
+                />
+              </div>
+
+              {/* 7. 2-Column: Status Breakdown & Daily Time Breakdown list */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <StatusBreakdown
+                  statuses={reportData.statusSummary || []}
+                  totalTasks={reportData.totalTasks || 0}
+                  totalWorkedMinutes={reportData.totalWorkedMinutes || 0}
+                />
+                <TimeSummary dailyData={reportData.dailySummary || []} />
               </div>
             </div>
           ) : null}
