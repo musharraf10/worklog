@@ -7,6 +7,7 @@ const reportRoutes = require("./routes/reportRoutes");
 const mentorLogRoutes = require("./routes/mentorLogRoutes");
 const shareLinkRoutes = require("./routes/shareLinkRoutes");
 const sharedPortalRoutes = require("./routes/sharedPortalRoutes");
+const impactRoutes = require("./routes/impactRoutes");
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorMiddleware");
 
@@ -40,6 +41,8 @@ app.use("/api/mentor-logs", mentorLogRoutes);
 app.use("/api/share-links", shareLinkRoutes);
 
 app.use("/api/shared", sharedPortalRoutes);
+
+app.use("/api/impact", impactRoutes);
 
 app.use(errorHandler);
 
