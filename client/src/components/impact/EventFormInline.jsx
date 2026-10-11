@@ -117,30 +117,30 @@ export const EventFormInline = ({
   return (
     <div className="w-full min-w-0 bg-brand-light border border-brand-primary/30 rounded-2xl p-4 shadow-xs sm:p-5 text-left">
       {/* Header bar matching Work Log inline expansion */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-brand-primary/20">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="mb-4 flex min-w-0 flex-col items-stretch gap-3 border-b border-brand-primary/20 pb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3 sm:flex-1">
           <div className="w-9 h-9 rounded-lg bg-brand-soft border border-brand-primary/30 flex items-center justify-center text-brand-dark shadow-xs shrink-0">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
             </svg>
           </div>
           <div className="min-w-0">
-            <h3 className="text-lg font-bold text-brand-dark">
+            <h3 className="text-base font-bold leading-tight text-brand-dark sm:text-lg">
               Record New Event & Initiative
             </h3>
-            <p className="text-xs sm:text-sm text-brand-dark/70 font-medium">
+            <p className="mt-1 text-xs leading-snug text-brand-dark/70 font-medium sm:text-sm">
               Document leadership, workshops, hackathons, and community contributions
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
           {/* Quick / Detailed Mode Segmented Control */}
-          <div className="inline-flex rounded-xl bg-brand-soft/70 p-1 border border-brand-primary/20 text-xs font-semibold">
+          <div className="inline-flex min-w-0 flex-1 rounded-xl bg-brand-soft/70 p-1 border border-brand-primary/20 text-xs font-semibold sm:flex-none">
             <button
               type="button"
               onClick={() => setFormMode('quick')}
-              className={`px-3 py-1 rounded-lg transition-all ${
+              className={`flex-1 px-2 py-1.5 rounded-lg transition-all sm:flex-none sm:px-3 sm:py-1 ${
                 formMode === 'quick'
                   ? 'bg-brand-primary text-brand-light shadow-2xs font-bold'
                   : 'text-brand-dark/80 hover:text-brand-dark'
@@ -151,7 +151,7 @@ export const EventFormInline = ({
             <button
               type="button"
               onClick={() => setFormMode('detailed')}
-              className={`px-3 py-1 rounded-lg transition-all ${
+              className={`flex-1 px-2 py-1.5 rounded-lg transition-all sm:flex-none sm:px-3 sm:py-1 ${
                 formMode === 'detailed'
                   ? 'bg-brand-primary text-brand-light shadow-2xs font-bold'
                   : 'text-brand-dark/80 hover:text-brand-dark'

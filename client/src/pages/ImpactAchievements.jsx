@@ -110,69 +110,109 @@ export const ImpactAchievements = () => {
 
   return (
     <div className="w-full min-w-0 space-y-5 sm:space-y-6 text-left">
-      {/* Section Switcher Tabs (Segmented Control matching MonthlyReport) */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="inline-flex flex-wrap items-center p-1 bg-brand-soft/60 rounded-xl border border-brand-primary/40 shadow-xs max-w-full">
-          <button
-            type="button"
-            onClick={() => handleSectionChange('events')}
-            className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${
-              activeSection === 'events'
-                ? 'bg-brand-primary text-brand-dark shadow-xs'
-                : 'text-brand-dark/70 hover:text-brand-dark'
-            }`}
+      {/* Section Switcher Tabs */}
+      <div className="w-full space-y-3">
+        {/* Mobile Dropdown (< md) */}
+        <div className="w-full md:hidden">
+          <label htmlFor="impact-section-select" className="sr-only">
+            Choose an Impact section
+          </label>
+          <select
+            id="impact-section-select"
+            value={activeSection}
+            onChange={(event) => handleSectionChange(event.target.value)}
+            className="h-11 w-full rounded-xl border border-brand-primary/40 bg-brand-soft/60 px-3 text-sm font-bold text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
           >
-            Events & Initiatives
-            {selectedEventIds.length > 0 && (
-              <span className="ml-2 px-1.5 py-0.2 rounded-full text-xs font-extrabold bg-brand-dark text-brand-light">
-                {selectedEventIds.length}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSectionChange('students')}
-            className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${
-              activeSection === 'students'
-                ? 'bg-brand-primary text-brand-dark shadow-xs'
-                : 'text-brand-dark/70 hover:text-brand-dark'
-            }`}
-          >
-            Student Impact
-            {selectedStudentImpactIds.length > 0 && (
-              <span className="ml-2 px-1.5 py-0.2 rounded-full text-xs font-extrabold bg-brand-dark text-brand-light">
-                {selectedStudentImpactIds.length}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSectionChange('summary')}
-            className={`px-4 py-2 rounded-lg text-sm sm:text-base font-bold transition-all ${
-              activeSection === 'summary'
-                ? 'bg-brand-primary text-brand-dark shadow-xs'
-                : 'text-brand-dark/70 hover:text-brand-dark'
-            }`}
-          >
-            Impact Summary & Appraisal
-          </button>
+            <option value="events">
+              Events &amp; Initiatives{selectedEventIds.length ? ` (${selectedEventIds.length} selected)` : ''}
+            </option>
+            <option value="students">
+              Student Impact{selectedStudentImpactIds.length ? ` (${selectedStudentImpactIds.length} selected)` : ''}
+            </option>
+            <option value="summary">Impact Summary &amp; Appraisal</option>
+          </select>
         </div>
 
+        {/* Desktop Full-Width Segmented Tab Bar (>= md) */}
+        <div className="hidden md:flex w-full items-center gap-3">
+          <div className="flex-1 grid grid-cols-3 p-0.5 bg-brand-soft/60 rounded-xl border border-brand-primary/40 shadow-xs">
+            <button
+              type="button"
+              onClick={() => handleSectionChange('events')}
+              className={`flex items-center justify-center px-4 py-2.5 rounded-lg text-sm lg:text-base font-bold transition-all ${activeSection === 'events'
+                ? 'bg-brand-primary text-brand-dark shadow-xs'
+                : 'text-brand-dark/70 hover:text-brand-dark'
+                }`}
+            >
+              <span>Events &amp; Initiatives</span>
+              {selectedEventIds.length > 0 && (
+                <span className="ml-2 px-1.5 py-0.5 rounded-full text-xs font-extrabold bg-brand-dark text-brand-light">
+                  {selectedEventIds.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSectionChange('students')}
+              className={`flex items-center justify-center px-4 py-2.5 rounded-lg text-sm lg:text-base font-bold transition-all ${activeSection === 'students'
+                ? 'bg-brand-primary text-brand-dark shadow-xs'
+                : 'text-brand-dark/70 hover:text-brand-dark'
+                }`}
+            >
+              <span>Student Impact</span>
+              {selectedStudentImpactIds.length > 0 && (
+                <span className="ml-2 px-1.5 py-0.5 rounded-full text-xs font-extrabold bg-brand-dark text-brand-light">
+                  {selectedStudentImpactIds.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSectionChange('summary')}
+              className={`flex items-center justify-center px-4 py-2.5 rounded-lg text-sm lg:text-base font-bold transition-all ${activeSection === 'summary'
+                ? 'bg-brand-primary text-brand-dark shadow-xs'
+                : 'text-brand-dark/70 hover:text-brand-dark'
+                }`}
+            >
+              Impact Summary &amp; Appraisal
+            </button>
+          </div>
+
+          {/* Appraisal Quick Jump Button when items are selected */}
+          {totalSelectedCount > 0 && activeSection !== 'summary' && (
+            <button
+              type="button"
+              onClick={() => setActiveSection('summary')}
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-brand-dark px-4 py-2.5 text-sm font-bold text-brand-light shadow-xs hover:bg-brand-dark/90 transition-colors"
+            >
+              <svg className="w-4 h-4 text-brand-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Appraisal ({totalSelectedCount})</span>
+            </button>
+          )}
+        </div>
+
+        {/* Mobile Appraisal Trigger (< md) */}
         {totalSelectedCount > 0 && activeSection !== 'summary' && (
-          <button
-            type="button"
-            onClick={() => setActiveSection('summary')}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-dark px-3.5 py-2 text-sm font-bold text-brand-light shadow-xs hover:bg-brand-dark/90 transition-colors"
-          >
-            <svg className="w-4 h-4 text-brand-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span>Appraisal ({totalSelectedCount} Selected)</span>
-          </button>
+          <div className="block md:hidden">
+            <button
+              type="button"
+              onClick={() => setActiveSection('summary')}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-dark px-4 py-2.5 text-sm font-bold text-brand-light shadow-xs"
+            >
+              <svg className="w-4 h-4 text-brand-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>View Appraisal Report ({totalSelectedCount} Selected)</span>
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Main Header (matching DailyLogs.jsx header exactly) */}
+      {/* Main Header */}
       <header className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-brand-primary/20 bg-brand-light p-4 shadow-xs sm:p-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-[.14em] text-brand-primary">
@@ -207,7 +247,7 @@ export const ImpactAchievements = () => {
         </div>
       </header>
 
-      {/* KPI Overview Strip (matching DaySummary metrics grid exactly, NO white cards) */}
+      {/* KPI Overview Strip */}
       <section className="rounded-2xl border border-brand-primary/25 bg-brand-light p-4 shadow-xs sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-brand-primary/20 pb-4">
           <div>
@@ -225,7 +265,7 @@ export const ImpactAchievements = () => {
 
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-xl border border-brand-primary/15 bg-brand-soft/25 p-3">
-            <p className="text-xs font-semibold text-brand-dark/60">Events & workshops</p>
+            <p className="text-xs font-semibold text-brand-dark/60">Events &amp; workshops</p>
             <p className="mt-1 text-xl font-bold text-brand-dark">{stats?.totalEvents || 0}</p>
           </div>
           <div className="rounded-xl border border-brand-primary/15 bg-brand-soft/25 p-3">
@@ -281,7 +321,7 @@ export const ImpactAchievements = () => {
         />
       )}
 
-      {/* Floating Notice Banner (matching DailyLogs.jsx line 61) */}
+      {/* Floating Notice Banner */}
       {notice && (
         <div
           role="status"

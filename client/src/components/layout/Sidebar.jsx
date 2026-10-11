@@ -85,7 +85,7 @@ export const Sidebar = ({ onClose, isCollapsed = false, onToggleCollapse }) => {
         isCollapsed ? 'w-[72px]' : 'w-60 sm:w-64'
       }`}
     >
-      <div>
+      <div className="flex min-h-0 flex-1 flex-col">
         {/* Sidebar Header */}
         <div
           className={`h-16 flex items-center border-b border-brand-primary/20 ${
@@ -149,7 +149,7 @@ export const Sidebar = ({ onClose, isCollapsed = false, onToggleCollapse }) => {
         </div>
 
         {/* Navigation Links */}
-        <nav className={`p-3 space-y-1.5 ${isCollapsed ? 'px-2' : 'px-3.5'}`}>
+        <nav className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 space-y-1.5 ${isCollapsed ? 'px-2' : 'px-3.5'}`}>
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -176,7 +176,7 @@ export const Sidebar = ({ onClose, isCollapsed = false, onToggleCollapse }) => {
       </div>
 
       {/* User Section & Logout */}
-      <div className={`border-t border-brand-primary/20 ${isCollapsed ? 'p-2' : 'p-3.5'}`}>
+      <div className={`shrink-0 border-t border-brand-primary/20 ${isCollapsed ? 'p-2' : 'p-3.5'}`}>
         {!isCollapsed ? (
           <>
             <div className="flex items-center gap-3 p-2.5 rounded-lg bg-brand-soft/30 mb-2">
@@ -191,7 +191,7 @@ export const Sidebar = ({ onClose, isCollapsed = false, onToggleCollapse }) => {
                   {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </div>
               )}
-              <div className="overflow-hidden flex-1 text-left">
+              <div className="min-w-0 flex-1 text-left">
                 <p className="text-sm font-bold text-brand-dark truncate">
                   {user?.name || 'User'}
                 </p>
