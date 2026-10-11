@@ -109,10 +109,10 @@ export const ImpactAchievements = () => {
   const syncColor = pendingSync > 0 ? 'bg-amber-500' : 'bg-emerald-600';
 
   return (
-    <div className="space-y-5 sm:space-y-6 text-left">
+    <div className="w-full min-w-0 space-y-5 sm:space-y-6 text-left">
       {/* Section Switcher Tabs (Segmented Control matching MonthlyReport) */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="inline-flex items-center p-1 bg-brand-soft/60 rounded-xl border border-brand-primary/40 shadow-xs">
+        <div className="inline-flex flex-wrap items-center p-1 bg-brand-soft/60 rounded-xl border border-brand-primary/40 shadow-xs max-w-full">
           <button
             type="button"
             onClick={() => handleSectionChange('events')}

@@ -101,16 +101,16 @@ export const StudentFormInline = ({
   };
 
   return (
-    <div className="bg-brand-light border border-brand-primary/30 rounded-2xl p-4 shadow-xs sm:p-6 text-left">
+    <div className="w-full min-w-0 bg-brand-light border border-brand-primary/30 rounded-2xl p-4 shadow-xs sm:p-5 text-left">
       {/* Header with expand / collapse */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-brand-primary/20">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-brand-primary/20">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-9 h-9 rounded-lg bg-brand-soft border border-brand-primary/30 flex items-center justify-center text-brand-dark shadow-xs shrink-0">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="text-lg font-bold text-brand-dark">Record Student Mentorship Story</h3>
             <p className="text-xs sm:text-sm text-brand-dark/70 font-medium">
               Document student challenges, mentorship interventions, and verifiable outcomes
@@ -165,7 +165,7 @@ export const StudentFormInline = ({
       </div>
 
       {isExpanded && (
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+        <form onSubmit={handleSubmit} className="min-w-0 space-y-4">
           {error && (
             <div className="p-3 bg-brand-soft border border-brand-dark/30 rounded-xl text-xs font-semibold text-brand-dark flex items-center justify-between">
               <span>{error}</span>
@@ -179,8 +179,9 @@ export const StudentFormInline = ({
             </div>
           )}
 
-          {/* Row 1: Student Name, Batch/Cohort, Date, Privacy toggle */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-start">
+          <section className="space-y-3" aria-labelledby="student-basic-heading">
+          <h4 id="student-basic-heading" className="text-sm font-bold text-brand-dark">Basic Information</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 items-start">
             <div className="min-w-0 w-full">
               <Input
                 label="Student Name"
@@ -189,6 +190,7 @@ export const StudentFormInline = ({
                 onChange={handleChange}
                 placeholder="e.g. Alex Morgan"
                 required
+                className="h-11 px-3 py-2 text-sm"
               />
             </div>
 
@@ -199,6 +201,7 @@ export const StudentFormInline = ({
                 value={formData.studentBatch}
                 onChange={handleChange}
                 placeholder="e.g. 2026 Batch - Section B"
+                className="h-11 px-3 py-2 text-sm"
               />
             </div>
 
@@ -210,6 +213,7 @@ export const StudentFormInline = ({
                 value={formData.date}
                 onChange={handleChange}
                 required
+                className="h-11 px-3 py-2 text-sm"
               />
             </div>
 
@@ -245,9 +249,11 @@ export const StudentFormInline = ({
               </label>
             </div>
           </div>
+          </section>
 
-          {/* Mentorship Narrative Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
+          <section className="space-y-3" aria-labelledby="student-contributions-heading">
+          <h4 id="student-contributions-heading" className="text-sm font-bold text-brand-dark">Responsibilities & Contributions</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
             <div className="w-full flex flex-col gap-1.5 text-left min-w-0">
               <label className="text-sm font-semibold text-brand-dark tracking-wide">
                 Initial Challenge / Struggle Faced by Student <span className="ml-1 text-brand-dark/70">*</span>
@@ -258,7 +264,7 @@ export const StudentFormInline = ({
                 value={formData.initialChallenge}
                 onChange={handleChange}
                 placeholder="e.g. Struggling with dynamic programming in mock interviews; repeated rejection in round 1; blocked on building capstone backend"
-                className="w-full px-4 py-2.5 text-base bg-brand-light text-brand-dark placeholder-brand-dark/40 rounded-lg border border-brand-dark/20 hover:border-brand-dark/40 focus:border-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-primary/60 transition-all duration-150 leading-relaxed min-h-[90px] resize-y"
+                className="w-full min-w-0 px-3 py-2 text-sm bg-brand-light text-brand-dark placeholder-brand-dark/40 rounded-lg border border-brand-dark/20 hover:border-brand-dark/40 focus:border-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-primary/60 transition-all duration-150 leading-relaxed min-h-[78px] resize-y"
                 required
               />
             </div>
@@ -273,13 +279,16 @@ export const StudentFormInline = ({
                 value={formData.howIHelped}
                 onChange={handleChange}
                 placeholder="e.g. Conducted 3 one-on-one debugging sessions; restructured project architecture into MVC; ran 2 targeted mock interviews"
-                className="w-full px-4 py-2.5 text-base bg-brand-light text-brand-dark placeholder-brand-dark/40 rounded-lg border border-brand-dark/20 hover:border-brand-dark/40 focus:border-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-primary/60 transition-all duration-150 leading-relaxed min-h-[90px] resize-y"
+                className="w-full min-w-0 px-3 py-2 text-sm bg-brand-light text-brand-dark placeholder-brand-dark/40 rounded-lg border border-brand-dark/20 hover:border-brand-dark/40 focus:border-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-primary/60 transition-all duration-150 leading-relaxed min-h-[78px] resize-y"
                 required
               />
             </div>
           </div>
+          </section>
 
-          <div className={formMode === 'detailed' ? 'grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start' : 'w-full'}>
+          <section className="space-y-3" aria-labelledby="student-outcomes-heading">
+          <h4 id="student-outcomes-heading" className="text-sm font-bold text-brand-dark">Outcomes</h4>
+          <div className={formMode === 'detailed' ? 'grid grid-cols-1 md:grid-cols-2 gap-3 items-start' : 'w-full'}>
             <div className="w-full flex flex-col gap-1.5 text-left min-w-0">
               <label className="text-sm font-semibold text-brand-dark tracking-wide">
                 Documented Achievement / Outcome <span className="ml-1 text-brand-dark/70">*</span>
@@ -290,7 +299,7 @@ export const StudentFormInline = ({
                 value={formData.achievement}
                 onChange={handleChange}
                 placeholder="e.g. Placed as SDE intern at Acme Corp; Finished full capstone deployment; Won 2nd place in hackathon"
-                className="w-full px-4 py-2.5 text-base bg-brand-light text-brand-dark placeholder-brand-dark/40 rounded-lg border border-brand-dark/20 hover:border-brand-dark/40 focus:border-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-primary/60 transition-all duration-150 leading-relaxed min-h-[85px] resize-y"
+                className="w-full min-w-0 px-3 py-2 text-sm bg-brand-light text-brand-dark placeholder-brand-dark/40 rounded-lg border border-brand-dark/20 hover:border-brand-dark/40 focus:border-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-primary/60 transition-all duration-150 leading-relaxed min-h-[78px] resize-y"
                 required
               />
             </div>
@@ -307,18 +316,19 @@ export const StudentFormInline = ({
               </div>
             )}
           </div>
+          </section>
 
           {/* Google Drive Evidence Section (Multiple Drive links with optional descriptions) */}
-          <div className="pt-3 border-t border-brand-primary/20">
+          <section className="pt-3 border-t border-brand-primary/20">
             <GoogleDriveEvidenceSection
               links={formData.evidenceLinks}
               onChange={handleEvidenceLinksChange}
               showNotice={true}
             />
-          </div>
+          </section>
 
           {/* Action Buttons */}
-          <div className="pt-4 border-t border-brand-primary/20 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-brand-primary/20 flex flex-wrap items-center justify-end gap-3">
             {onCancel && (
               <Button
                 type="button"

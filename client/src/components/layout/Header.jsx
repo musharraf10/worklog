@@ -22,8 +22,8 @@ export const Header = ({ onOpenSidebar }) => {
 
   return (
     <>
-      <header className="h-16 bg-brand-light/95 backdrop-blur-xs border-b border-brand-primary/20 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center gap-3">
+      <header className="min-w-0 shrink-0 bg-brand-light/95 backdrop-blur-xs border-b border-brand-primary/20 px-3 sm:px-6 flex items-center justify-between gap-2 sticky top-0 z-30 h-16">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <button
             type="button"
             onClick={onOpenSidebar}
@@ -35,17 +35,17 @@ export const Header = ({ onOpenSidebar }) => {
             </svg>
           </button>
 
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-brand-dark tracking-tight">{title}</h1>
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-xl font-bold text-brand-dark tracking-tight truncate">{title}</h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-3.5">
+        <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 min-w-0 shrink-0">
           {/* Share Portal Button */}
           <button
             type="button"
             onClick={() => setIsShareModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-primary text-brand-dark text-xs sm:text-sm font-bold shadow-xs hover:bg-brand-primary/90 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-brand-primary text-brand-dark text-xs sm:text-sm font-bold shadow-xs hover:bg-brand-primary/90 transition-colors shrink-0"
             title="Generate secure share link for manager"
           >
             <svg className="w-4 h-4 text-brand-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -57,7 +57,7 @@ export const Header = ({ onOpenSidebar }) => {
 
           <Link
             to="/manager-view"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-soft/50 hover:bg-brand-soft text-brand-dark text-xs sm:text-sm font-semibold border border-brand-primary/40 transition-colors"
+            className="hidden md:inline-flex items-center gap-1.5 px-2 lg:px-3 py-1.5 rounded-lg bg-brand-soft/50 hover:bg-brand-soft text-brand-dark text-xs lg:text-sm font-semibold border border-brand-primary/40 transition-colors shrink-0"
             title="Open Manager View (Spreadsheet)"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -66,25 +66,25 @@ export const Header = ({ onOpenSidebar }) => {
             Manager View
           </Link>
 
-          <SyncStatus compact showSyncButton />
+          <div className="shrink-0 [&>div]:px-2 [&>div]:sm:px-3 [&>div]:gap-1.5"><SyncStatus compact showSyncButton /></div>
 
           <Link
             to="/profile"
-            className="flex items-center gap-2.5 p-1 sm:px-3 sm:py-1.5 rounded-lg hover:bg-brand-soft/40 transition-colors"
+            className="flex items-center gap-2 p-1 sm:px-2 lg:px-3 sm:py-1.5 rounded-lg hover:bg-brand-soft/40 transition-colors shrink-0 min-w-0"
             title="Go to profile"
           >
             {user?.profilePicture ? (
               <img
                 src={user.profilePicture}
                 alt={user.name}
-                className="w-8 h-8 rounded-full object-cover border border-brand-primary/40"
+                className="w-8 h-8 rounded-full object-cover border border-brand-primary/40 flex-shrink-0"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-brand-soft text-brand-dark font-bold text-sm flex items-center justify-center border border-brand-primary/40">
+              <div className="w-8 h-8 rounded-full bg-brand-soft text-brand-dark font-bold text-sm flex items-center justify-center border border-brand-primary/40 flex-shrink-0">
                 {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
               </div>
             )}
-            <span className="hidden md:inline text-sm font-semibold text-brand-dark max-w-[140px] truncate">
+            <span className="inline-block min-w-0 max-w-[72px] sm:max-w-[100px] lg:max-w-[140px] truncate text-xs sm:text-sm font-semibold text-brand-dark">
               {user?.name || 'Account'}
             </span>
           </Link>

@@ -115,16 +115,16 @@ export const EventFormInline = ({
   };
 
   return (
-    <div className="bg-brand-light border border-brand-primary/30 rounded-2xl p-4 shadow-xs sm:p-6 text-left">
+    <div className="w-full min-w-0 bg-brand-light border border-brand-primary/30 rounded-2xl p-4 shadow-xs sm:p-5 text-left">
       {/* Header bar matching Work Log inline expansion */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-brand-primary/20">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-brand-primary/20">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-9 h-9 rounded-lg bg-brand-soft border border-brand-primary/30 flex items-center justify-center text-brand-dark shadow-xs shrink-0">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
             </svg>
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="text-lg font-bold text-brand-dark">
               Record New Event & Initiative
             </h3>
@@ -182,7 +182,7 @@ export const EventFormInline = ({
       </div>
 
       {isExpanded && (
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+        <form onSubmit={handleSubmit} className="min-w-0 space-y-4">
           {error && (
             <div className="p-3 bg-brand-soft border border-brand-dark/30 rounded-xl text-xs font-semibold text-brand-dark flex items-center justify-between">
               <span>{error}</span>
@@ -196,9 +196,10 @@ export const EventFormInline = ({
             </div>
           )}
 
-          {/* Row 1: Title & Event Type */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 items-start">
-            <div className="md:col-span-2 min-w-0 w-full">
+          <section className="space-y-3" aria-labelledby="event-basic-heading">
+          <h4 id="event-basic-heading" className="text-sm font-bold text-brand-dark">Basic Information</h4>
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3 items-start">
+            <div className="min-w-0 w-full">
               <Input
                 label="Event / Initiative Title"
                 name="title"
@@ -206,21 +207,23 @@ export const EventFormInline = ({
                 onChange={handleChange}
                 placeholder="e.g. Full-Stack Web Development Bootcamp 2026"
                 required
+                className="h-11 px-3 py-2 text-sm"
               />
             </div>
-            <div className="md:col-span-1 min-w-0 w-full">
+            <div className="min-w-0 w-full">
               <Select
                 label="Event Category"
                 name="eventType"
                 value={formData.eventType}
                 onChange={handleChange}
                 options={EVENT_TYPES.map((t) => ({ value: t, label: t }))}
+                className="h-11 px-3 py-2 text-sm"
               />
             </div>
           </div>
 
           {/* Row 2: Dates, Role, Participants */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 items-start">
             <div className="min-w-0 w-full">
               <Input
                 label="Start Date"
@@ -229,6 +232,7 @@ export const EventFormInline = ({
                 value={formData.startDate}
                 onChange={handleChange}
                 required
+                className="h-11 px-3 py-2 text-sm"
               />
             </div>
             <div className="min-w-0 w-full">
@@ -238,6 +242,7 @@ export const EventFormInline = ({
                 name="endDate"
                 value={formData.endDate}
                 onChange={handleChange}
+                className="h-11 px-3 py-2 text-sm"
               />
             </div>
             <div className="min-w-0 w-full">
@@ -248,6 +253,7 @@ export const EventFormInline = ({
                 onChange={handleChange}
                 placeholder="e.g. Lead Instructor, Judge"
                 required
+                className="h-11 px-3 py-2 text-sm"
               />
             </div>
             <div className="min-w-0 w-full">
@@ -259,15 +265,18 @@ export const EventFormInline = ({
                 value={formData.participantsCount}
                 onChange={handleChange}
                 placeholder="0"
+                className="h-11 px-3 py-2 text-sm"
               />
             </div>
           </div>
+          </section>
 
           {/* Detailed Mode Additional Fields */}
           {formMode === 'detailed' && (
             <>
-              {/* Contributions & Responsibilities */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
+              <section className="space-y-3" aria-labelledby="event-contributions-heading">
+              <h4 id="event-contributions-heading" className="text-sm font-bold text-brand-dark">Responsibilities & Contributions</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
                 <div className="w-full flex flex-col gap-1.5 text-left min-w-0">
                   <label className="text-sm font-semibold text-brand-dark tracking-wide">
                     My Responsibilities
@@ -296,8 +305,11 @@ export const EventFormInline = ({
                 </div>
               </div>
 
-              {/* Outcomes & Achievements */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
+              </section>
+
+              <section className="space-y-3" aria-labelledby="event-outcomes-heading">
+              <h4 id="event-outcomes-heading" className="text-sm font-bold text-brand-dark">Outcomes</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
                 <div className="w-full flex flex-col gap-1.5 text-left min-w-0">
                   <label className="text-sm font-semibold text-brand-dark tracking-wide">
                     Outcomes & Metrics
@@ -327,7 +339,7 @@ export const EventFormInline = ({
               </div>
 
               {/* Participant Details & Tags */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
                 <div className="min-w-0 w-full">
                   <Input
                     label="Participant Demographics (Optional)"
@@ -347,20 +359,21 @@ export const EventFormInline = ({
                   />
                 </div>
               </div>
+              </section>
             </>
           )}
 
           {/* Google Drive Evidence Section (Multiple Drive links with optional descriptions) */}
-          <div className="pt-3 border-t border-brand-primary/20">
+          <section className="pt-3 border-t border-brand-primary/20">
             <GoogleDriveEvidenceSection
               links={formData.evidenceLinks}
               onChange={handleEvidenceLinksChange}
               showNotice={true}
             />
-          </div>
+          </section>
 
           {/* Action Buttons */}
-          <div className="pt-4 border-t border-brand-primary/20 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-brand-primary/20 flex flex-wrap items-center justify-end gap-3">
             {onCancel && (
               <Button
                 type="button"

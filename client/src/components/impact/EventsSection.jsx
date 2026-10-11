@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import impactService from '../../services/impactService';
 import EventFormInline from './EventFormInline';
 import EventCard from './EventCard';
@@ -25,6 +25,7 @@ export const EventsSection = ({
   onSelectAll,
   onNotice,
 }) => {
+  const milestonesRef = useRef(null);
   const [events, setEvents] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -77,6 +78,7 @@ export const EventsSection = ({
       if (onNotice) onNotice('Event / Initiative recorded successfully');
       await fetchEvents(1);
       if (onToggleView) onToggleView('list');
+      return true;
     } catch (err) {
       throw err;
     } finally {
@@ -114,14 +116,26 @@ export const EventsSection = ({
     <div className="worklog-flip-stage" aria-live="polite">
       <div key={view} className="worklog-flip-panel">
         {view === 'form' ? (
-          /* Form View: 2-Column with inline expandable form & timeline */
-          <div className="mx-auto grid max-w-7xl items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+          /* Full-width form with the recent milestones timeline below it */
+          <div className="w-full min-w-0 space-y-4">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => milestonesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="inline-flex items-center gap-2 rounded-lg border border-brand-primary/30 bg-brand-soft/40 px-3 py-2 text-sm font-semibold text-brand-dark transition hover:bg-brand-soft"
+              >
+                Recent milestones
+                <span aria-hidden="true">↓</span>
+              </button>
+            </div>
             <EventFormInline
               onSubmit={handleCreate}
               isLoading={isSaving}
               onCancel={onToggleView ? () => onToggleView('list') : undefined}
             />
-            <RecentEventsTimeline events={events} />
+            <div ref={milestonesRef} className="scroll-mt-20">
+              <RecentEventsTimeline events={events} />
+            </div>
           </div>
         ) : (
           /* List View */

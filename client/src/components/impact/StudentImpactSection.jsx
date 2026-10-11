@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import impactService from '../../services/impactService';
 import StudentFormInline from './StudentFormInline';
 import StudentImpactCard from './StudentImpactCard';
@@ -12,6 +12,7 @@ export const StudentImpactSection = ({
   onSelectAll,
   onNotice,
 }) => {
+  const milestonesRef = useRef(null);
   const [students, setStudents] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -101,14 +102,26 @@ export const StudentImpactSection = ({
     <div className="worklog-flip-stage" aria-live="polite">
       <div key={view} className="worklog-flip-panel">
         {view === 'form' ? (
-          /* Form View: 2-Column with inline expandable form & timeline */
-          <div className="mx-auto grid max-w-7xl items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+          /* Full-width form with recent student records below it */
+          <div className="w-full min-w-0 space-y-4">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => milestonesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="inline-flex items-center gap-2 rounded-lg border border-brand-primary/30 bg-brand-soft/40 px-3 py-2 text-sm font-semibold text-brand-dark transition hover:bg-brand-soft"
+              >
+                Recent student stories
+                <span aria-hidden="true">↓</span>
+              </button>
+            </div>
             <StudentFormInline
               onSubmit={handleCreate}
               isLoading={isSaving}
               onCancel={onToggleView ? () => onToggleView('list') : undefined}
             />
-            <RecentStudentsTimeline students={students} />
+            <div ref={milestonesRef} className="scroll-mt-20">
+              <RecentStudentsTimeline students={students} />
+            </div>
           </div>
         ) : (
           /* List View */
