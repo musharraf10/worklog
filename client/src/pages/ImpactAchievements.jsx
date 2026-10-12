@@ -176,7 +176,7 @@ export const ImpactAchievements = () => {
                 : 'text-brand-dark/70 hover:text-brand-dark'
                 }`}
             >
-              Impact Summary &amp; Appraisal
+              Impact Summary
             </button>
           </div>
 
