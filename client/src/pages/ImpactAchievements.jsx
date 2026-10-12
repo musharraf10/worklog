@@ -129,7 +129,7 @@ export const ImpactAchievements = () => {
             <option value="students">
               Student Impact{selectedStudentImpactIds.length ? ` (${selectedStudentImpactIds.length} selected)` : ''}
             </option>
-            <option value="summary">Impact Summary &amp; Appraisal</option>
+            <option value="summary">Impact Summary</option>
           </select>
         </div>
 
