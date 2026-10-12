@@ -408,7 +408,9 @@ const addEventEvidenceLink = async (req, res) => {
 
     const event = await ImpactEvent.findOne({ _id: id, user: req.user._id });
     if (!event) {
-      return res.status(404).json({ success: false, message: "Event not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Event not found" });
     }
 
     event.evidenceLinks.push({
@@ -450,12 +452,16 @@ const updateEventEvidenceLink = async (req, res) => {
 
     const event = await ImpactEvent.findOne({ _id: id, user: req.user._id });
     if (!event) {
-      return res.status(404).json({ success: false, message: "Event not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Event not found" });
     }
 
     const link = event.evidenceLinks.id(linkId);
     if (!link) {
-      return res.status(404).json({ success: false, message: "Evidence link not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Evidence link not found" });
     }
 
     if (url) {
@@ -464,7 +470,9 @@ const updateEventEvidenceLink = async (req, res) => {
         description || title || link.title,
       );
       if (!classified.isValid) {
-        return res.status(400).json({ success: false, message: classified.error });
+        return res
+          .status(400)
+          .json({ success: false, message: classified.error });
       }
       link.url = classified.url;
       link.driveType = classified.driveType;
@@ -504,7 +512,9 @@ const deleteEventEvidenceLink = async (req, res) => {
 
     const event = await ImpactEvent.findOne({ _id: id, user: req.user._id });
     if (!event) {
-      return res.status(404).json({ success: false, message: "Event not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Event not found" });
     }
 
     event.evidenceLinks.pull({ _id: linkId });
@@ -658,7 +668,13 @@ const createStudent = async (req, res) => {
       tags,
     } = req.body;
 
-    if (!studentName || !date || !initialChallenge || !howIHelped || !achievement) {
+    if (
+      !studentName ||
+      !date ||
+      !initialChallenge ||
+      !howIHelped ||
+      !achievement
+    ) {
       return res.status(400).json({
         success: false,
         message:
@@ -870,7 +886,10 @@ const addStudentEvidenceLink = async (req, res) => {
       });
     }
 
-    const student = await StudentImpact.findOne({ _id: id, user: req.user._id });
+    const student = await StudentImpact.findOne({
+      _id: id,
+      user: req.user._id,
+    });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -915,7 +934,10 @@ const updateStudentEvidenceLink = async (req, res) => {
     const { id, linkId } = req.params;
     const { url, description, title } = req.body;
 
-    const student = await StudentImpact.findOne({ _id: id, user: req.user._id });
+    const student = await StudentImpact.findOne({
+      _id: id,
+      user: req.user._id,
+    });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -937,7 +959,9 @@ const updateStudentEvidenceLink = async (req, res) => {
         description || title || link.title,
       );
       if (!classified.isValid) {
-        return res.status(400).json({ success: false, message: classified.error });
+        return res
+          .status(400)
+          .json({ success: false, message: classified.error });
       }
       link.url = classified.url;
       link.driveType = classified.driveType;
@@ -975,7 +999,10 @@ const deleteStudentEvidenceLink = async (req, res) => {
   try {
     const { id, linkId } = req.params;
 
-    const student = await StudentImpact.findOne({ _id: id, user: req.user._id });
+    const student = await StudentImpact.findOne({
+      _id: id,
+      user: req.user._id,
+    });
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -1034,7 +1061,9 @@ const getImpactStats = async (req, res) => {
 
     let totalEvidenceFiles = 0;
     events.forEach((e) => (totalEvidenceFiles += (e.attachments || []).length));
-    students.forEach((s) => (totalEvidenceFiles += (s.attachments || []).length));
+    students.forEach(
+      (s) => (totalEvidenceFiles += (s.attachments || []).length),
+    );
 
     const pendingSyncCount =
       events.filter((e) => e.googleSheetSyncStatus !== "synced").length +
@@ -1467,10 +1496,9 @@ const getSharedImpactPortal = async (req, res) => {
     }
 
     const hashed = hashToken(token);
-    const shareLink = await ImpactShareLink.findOne({ tokenHash: hashed }).populate(
-      "userId",
-      "name email profilePicture",
-    );
+    const shareLink = await ImpactShareLink.findOne({
+      tokenHash: hashed,
+    }).populate("userId", "name email profilePicture");
 
     if (!shareLink) {
       return res.status(404).json({
@@ -1508,7 +1536,9 @@ const getSharedImpactPortal = async (req, res) => {
       ) {
         eventFilter._id = { $in: shareLink.selectedEventIds };
       }
-      events = await ImpactEvent.find(eventFilter).sort({ startDate: -1 }).lean();
+      events = await ImpactEvent.find(eventFilter)
+        .sort({ startDate: -1 })
+        .lean();
     }
 
     let students = [];
@@ -1520,7 +1550,9 @@ const getSharedImpactPortal = async (req, res) => {
       ) {
         studentFilter._id = { $in: shareLink.selectedStudentImpactIds };
       }
-      students = await StudentImpact.find(studentFilter).sort({ date: -1 }).lean();
+      students = await StudentImpact.find(studentFilter)
+        .sort({ date: -1 })
+        .lean();
 
       // Enforce student privacy by default unless authorized
       if (!shareLink.allowStudentPrivateData) {

@@ -95,8 +95,8 @@ export const ImpactAchievements = () => {
       };
     }
     return {
-      subtitle: 'Evaluation & Appraisal',
-      title: 'Impact Summary & Appraisal',
+      subtitle: 'Evaluation',
+      title: 'Impact Summary',
       description:
         'Synthesize your selected initiatives, student outcomes, and evidence into an official self-appraisal document.',
       btnText: null,

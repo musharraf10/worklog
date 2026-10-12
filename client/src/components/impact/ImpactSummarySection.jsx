@@ -81,7 +81,7 @@ export const ImpactSummarySection = ({
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          'Failed to generate appraisal report. Ensure records exist for your filter.',
+        'Failed to generate appraisal report. Ensure records exist for your filter.',
       );
     } finally {
       setIsGenerating(false);
@@ -97,7 +97,7 @@ export const ImpactSummarySection = ({
         <div className="rounded-2xl border border-brand-primary/25 bg-brand-light p-5 sm:p-6 shadow-xs space-y-5">
           <div>
             <h2 className="text-xl font-bold text-brand-dark">
-              Appraisal Summary & Performance Report
+              Performance Report
             </h2>
             <p className="text-sm text-brand-dark/70 mt-1 font-medium">
               Synthesize your events, workshops, student mentoring stories, and attached evidence into an executive self-appraisal document.
@@ -120,11 +120,10 @@ export const ImpactSummarySection = ({
                   key={p.id}
                   type="button"
                   onClick={() => handlePresetChange(p.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                    quickDatePreset === p.id
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${quickDatePreset === p.id
                       ? 'bg-brand-dark text-brand-light border-brand-dark shadow-xs'
                       : 'bg-brand-light text-brand-dark border-brand-dark/20 hover:bg-brand-soft'
-                  }`}
+                    }`}
                 >
                   {p.label}
                 </button>
