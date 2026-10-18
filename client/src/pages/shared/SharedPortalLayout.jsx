@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import sharedPortalService from '../../services/sharedPortalService';
 import SharedDashboard from './SharedDashboard';
 import SharedWorkLogs from './SharedWorkLogs';
 import SharedMentorLogs from './SharedMentorLogs';
+import SharedManagerView from './SharedManagerView';
 import SharedWeeklyReport from './SharedWeeklyReport';
 import SharedMonthlyReport from './SharedMonthlyReport';
 import AddRemarkModal from '../../components/share/AddRemarkModal';
@@ -27,11 +28,46 @@ const computeRemainingTime = (expiresAt) => {
 
 export const SharedPortalLayout = () => {
   const { token } = useParams();
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'worklogs' | 'mentorlogs' | 'weekly' | 'monthly'
+  const location = useLocation();
+
+  const initialTab = useMemo(() => {
+    const path = location.pathname.toLowerCase();
+    if (path.includes('/manager-view') || path.includes('/managerview')) {
+      return 'managerview';
+    }
+    if (path.includes('/worklogs') || path.includes('/work-logs')) {
+      return 'worklogs';
+    }
+    if (path.includes('/mentorlogs') || path.includes('/mentor-logs')) {
+      return 'mentorlogs';
+    }
+    if (path.includes('/weekly')) {
+      return 'weekly';
+    }
+    if (path.includes('/monthly')) {
+      return 'monthly';
+    }
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (
+      tabParam &&
+      ['dashboard', 'managerview', 'worklogs', 'mentorlogs', 'weekly', 'monthly'].includes(
+        tabParam.toLowerCase(),
+      )
+    ) {
+      return tabParam.toLowerCase();
+    }
+    return 'dashboard';
+  }, [location.pathname, location.search]);
+
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [portalMeta, setPortalMeta] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorState, setErrorState] = useState(null); // { code, message }
   const [remarks, setRemarks] = useState([]);
+
+  // Mobile menu dropdown open state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Add remark modal state
   const [remarkModal, setRemarkModal] = useState({
@@ -154,7 +190,7 @@ export const SharedPortalLayout = () => {
 
     return (
       <div className="min-h-screen bg-brand-light flex items-center justify-center p-4 text-brand-dark">
-        <div className="max-w-md w-full bg-brand-light border border-brand-primary/30 rounded-3xl p-8 text-center shadow-xl space-y-4">
+        <div className="max-w-md w-full bg-brand-light border border-brand-primary/30 rounded-3xl p-6 sm:p-8 text-center shadow-xl space-y-4">
           <div className="w-16 h-16 mx-auto rounded-full bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700">
             {isExpired ? (
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -171,7 +207,7 @@ export const SharedPortalLayout = () => {
             )}
           </div>
 
-          <h2 className="text-2xl font-extrabold text-brand-dark">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-brand-dark">
             {isExpired
               ? 'This shared portal link has expired.'
               : isRevoked
@@ -179,7 +215,7 @@ export const SharedPortalLayout = () => {
               : 'Shared Portal Inaccessible'}
           </h2>
 
-          <p className="text-sm text-brand-dark/70 font-medium">
+          <p className="text-xs sm:text-sm text-brand-dark/70 font-medium">
             {isExpired
               ? 'The manager review period for this link has ended. Please contact the portal owner to generate a new share link.'
               : isRevoked
@@ -200,16 +236,27 @@ export const SharedPortalLayout = () => {
   const owner = portalMeta?.owner;
   const remainingTimeStr = computeRemainingTime(portalMeta?.expiresAt);
 
+  const tabs = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'managerview', label: 'Manager View' },
+    { id: 'worklogs', label: 'Work Logs' },
+    { id: 'mentorlogs', label: 'Mentor Logs' },
+    { id: 'weekly', label: 'Weekly Report' },
+    { id: 'monthly', label: 'Monthly Report' },
+  ];
+
+  const currentTabLabel = tabs.find((t) => t.id === activeTab)?.label || 'Dashboard';
+
   return (
-    <div className="min-h-screen bg-brand-light font-sans text-brand-dark flex flex-col">
-      {/* 1. TOP BANNER: Shared Portal — Read Only | Remarks Enabled */}
-      <div className="bg-brand-dark text-brand-light px-4 py-3 sm:px-6 shadow-sm border-b border-brand-primary/30 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="px-2.5 py-0.5 rounded-md bg-amber-400/20 border border-amber-400/40 text-amber-300 text-xs font-extrabold uppercase tracking-wider">
+    <div className="min-h-screen bg-brand-light font-sans text-brand-dark flex flex-col w-full overflow-x-hidden">
+      {/* 1. HIERARCHY LEVEL 1: TOP BANNER (Shared Access, Expiry, Remarks Permission) */}
+      <header className="bg-brand-dark text-brand-light px-3.5 py-2.5 sm:px-6 shadow-sm border-b border-brand-primary/30 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-2 py-0.5 rounded-md bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[11px] sm:text-xs font-extrabold uppercase tracking-wider">
               Shared Portal — Read Only
             </span>
-            <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               Remarks Enabled
             </span>
@@ -218,7 +265,7 @@ export const SharedPortalLayout = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-brand-light/75 self-start sm:self-auto">
+          <div className="flex items-center gap-2.5 text-xs text-brand-light/75 self-start sm:self-auto">
             {portalMeta?.expiresAt && (
               <span className="flex items-center gap-1 font-medium bg-brand-light/10 px-2.5 py-1 rounded-lg">
                 <svg className="w-3.5 h-3.5 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -229,51 +276,104 @@ export const SharedPortalLayout = () => {
             )}
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* 2. PORTAL NAVIGATION BAR */}
-      <div className="bg-brand-light/95 backdrop-blur-xs border-b border-brand-primary/20 px-4 sm:px-6 py-2.5 sticky top-[49px] z-30">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+      {/* 2. HIERARCHY LEVEL 2: PORTAL IDENTITY AND NAVIGATION */}
+      <nav
+        aria-label="Portal Navigation"
+        className="bg-brand-light/95 backdrop-blur-xs border-b border-brand-primary/20 px-3.5 sm:px-6 py-2.5 sticky top-[45px] sm:top-[49px] z-30"
+      >
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Brand mark & Owner identity */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-dark flex items-center justify-center text-brand-light font-extrabold text-base shadow-xs shrink-0">
-              W
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-brand-dark flex items-center justify-center text-brand-light font-extrabold text-sm sm:text-base shadow-xs shrink-0">
+                W
+              </div>
+              <div className="text-left">
+                <h1 className="text-sm sm:text-base font-bold text-brand-dark leading-tight">
+                  {owner?.name ? `${owner.name}'s Portal` : 'Work Log Portal'}
+                </h1>
+                <p className="text-[11px] sm:text-xs text-brand-dark/65 font-medium leading-none mt-0.5 truncate max-w-[220px] sm:max-w-xs">
+                  {owner?.email || 'Shared Access'}
+                </p>
+              </div>
             </div>
-            <div className="text-left">
-              <h1 className="text-base sm:text-lg font-bold text-brand-dark leading-tight">
-                {owner?.name ? `${owner.name}'s Portal` : 'Work Log Portal'}
-              </h1>
-              <p className="text-xs text-brand-dark/65 font-medium leading-none mt-0.5">
-                {owner?.email || ''}
-              </p>
-            </div>
+
+            {/* Mobile Dropdown Menu Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden flex items-center gap-1 px-3 py-1.5 rounded-xl border border-brand-primary/30 bg-brand-soft/60 text-xs font-bold text-brand-dark"
+              aria-expanded={isMobileMenuOpen}
+              aria-label="Toggle navigation menu"
+            >
+              <span>{currentTabLabel}</span>
+              <svg className="w-4 h-4 ml-0.5 text-brand-dark/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
           </div>
 
-          {/* Navigation Tabs */}
-          <nav className="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full">
-            {[
-              { id: 'dashboard', label: 'Dashboard' },
-              { id: 'worklogs', label: 'Work Logs' },
-              { id: 'mentorlogs', label: 'Mentor Logs' },
-              { id: 'weekly', label: 'Weekly Report' },
-              { id: 'monthly', label: 'Monthly Report' },
-            ].map((tab) => (
-              <button
-                type="button"
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
-                  activeTab === tab.id
-                    ? 'bg-brand-primary text-brand-dark shadow-xs'
-                    : 'text-brand-dark/75 hover:bg-brand-soft/50 hover:text-brand-dark'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+          {/* Desktop Navigation Tabs */}
+          <div className="hidden md:flex items-center gap-1.5 overflow-x-auto py-1 max-w-full">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              const isManagerView = tab.id === 'managerview';
+
+              return (
+                <button
+                  type="button"
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 min-h-[38px] flex items-center gap-1.5 ${
+                    isActive
+                      ? isManagerView
+                        ? 'bg-brand-dark text-brand-light shadow-xs ring-1 ring-brand-primary/50'
+                        : 'bg-brand-primary text-brand-dark shadow-xs'
+                      : isManagerView
+                      ? 'bg-brand-soft/80 text-brand-dark border border-brand-primary/30 hover:bg-brand-soft'
+                      : 'text-brand-dark/75 hover:bg-brand-soft/50 hover:text-brand-dark'
+                  }`}
+                >
+                  {isManagerView && (
+                    <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  )}
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mobile Collapsible Navigation Menu */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden grid grid-cols-2 gap-1.5 pt-2 pb-1 border-t border-brand-primary/20 animate-in fade-in slide-in-from-top-1">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    type="button"
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`px-3 py-2.5 rounded-xl text-xs font-bold text-center transition-all ${
+                      isActive
+                        ? 'bg-brand-dark text-brand-light shadow-xs'
+                        : 'bg-brand-soft/40 text-brand-dark/80 hover:bg-brand-soft'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
+      </nav>
 
       {/* Toast Notification */}
       {toastMessage && (
@@ -286,9 +386,17 @@ export const SharedPortalLayout = () => {
       )}
 
       {/* 3. MAIN WORKSPACE CONTENT */}
-      <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 px-3.5 py-5 sm:px-6 sm:py-8 max-w-7xl mx-auto w-full">
         {activeTab === 'dashboard' && (
           <SharedDashboard
+            token={token}
+            onAddRemark={handleOpenAddRemark}
+            remarksByTarget={remarksByTarget}
+            onNavigateTab={setActiveTab}
+          />
+        )}
+        {activeTab === 'managerview' && (
+          <SharedManagerView
             token={token}
             onAddRemark={handleOpenAddRemark}
             remarksByTarget={remarksByTarget}

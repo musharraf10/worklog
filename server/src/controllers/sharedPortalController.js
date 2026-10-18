@@ -40,7 +40,44 @@ const verifySharedPortal = async (req, res) => {
  */
 const getSharedWorkLogs = async (req, res) => {
   try {
-    const workLogs = await WorkLog.find({ user: req.ownerUser._id })
+    const filter = { user: req.ownerUser._id };
+
+    if (req.query.status && req.query.status !== "ALL") {
+      filter.status = req.query.status;
+    }
+    if (req.query.category && req.query.category !== "ALL") {
+      filter.category = req.query.category;
+    }
+    if (req.query.priority && req.query.priority !== "ALL") {
+      filter.priority = req.query.priority;
+    }
+    if (req.query.date) {
+      const d = new Date(`${req.query.date}T00:00:00.000Z`);
+      if (!Number.isNaN(d.getTime())) {
+        const nextD = new Date(d);
+        nextD.setUTCDate(nextD.getUTCDate() + 1);
+        filter.date = { $gte: d, $lt: nextD };
+      }
+    } else if (req.query.startDate && req.query.endDate) {
+      const start = new Date(`${req.query.startDate}T00:00:00.000Z`);
+      const end = new Date(`${req.query.endDate}T00:00:00.000Z`);
+      if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+        end.setUTCDate(end.getUTCDate() + 1);
+        filter.date = { $gte: start, $lt: end };
+      }
+    }
+    if (req.query.search && req.query.search.trim()) {
+      const regex = new RegExp(req.query.search.trim(), "i");
+      filter.$or = [
+        { task: regex },
+        { category: regex },
+        { activityType: regex },
+        { hallSection: regex },
+        { remarks: regex },
+      ];
+    }
+
+    const workLogs = await WorkLog.find(filter)
       .select(
         "_id date task category activityType timeFrom timeTo spentMinutes hallSection status priority remarks createdAt"
       )

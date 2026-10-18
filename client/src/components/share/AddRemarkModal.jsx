@@ -33,7 +33,7 @@ export const AddRemarkModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/50 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="w-full max-w-lg bg-brand-light border border-brand-primary/30 rounded-2xl p-5 sm:p-6 shadow-2xl text-left"
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-brand-light border border-brand-primary/30 rounded-2xl p-5 sm:p-6 shadow-2xl text-left"
         role="dialog"
         aria-modal="true"
       >
@@ -42,7 +42,7 @@ export const AddRemarkModal = ({
             <h3 className="text-lg font-bold text-brand-dark">Add Manager Remark</h3>
             {targetTitle && (
               <p className="text-xs text-brand-dark/70 font-medium mt-0.5 truncate max-w-xs sm:max-w-sm">
-                Target: {targetTitle}
+                [{targetType}] {targetTitle}
               </p>
             )}
           </div>

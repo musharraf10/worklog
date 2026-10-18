@@ -346,19 +346,12 @@ const getMonthlySummary = async (req, res) => {
     )}-01`;
 
     const lastDay = new Date(Date.UTC(numericYear, numericMonth, 0));
-
     const endDate = lastDay.toISOString().split("T")[0];
-
-    const nextMonth = new Date(Date.UTC(numericYear, numericMonth, 1));
 
     const summary = await buildSummary({
       userId: req.user._id,
       startDate,
-      endDate: new Date(
-        new Date(`${endDate}T00:00:00.000Z`).getTime() - 86400000,
-      )
-        .toISOString()
-        .split("T")[0],
+      endDate,
     });
 
     res.status(200).json({

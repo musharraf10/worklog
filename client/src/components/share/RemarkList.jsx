@@ -1,5 +1,3 @@
-import { formatDate } from '../../utils/dateUtils';
-
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);

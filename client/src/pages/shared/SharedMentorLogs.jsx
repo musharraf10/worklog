@@ -174,7 +174,7 @@ export const SharedMentorLogs = ({ token, onAddRemark, remarksByTarget = {} }) =
                       <span>Date: {formatDate(selectedLog.workLog.date, true)}</span>
                       <span>•</span>
                       <span>
-                        Time: {formatDisplayTime(selectedLog.workLog.timeFrom)} – {formatDisplayTime(selectedLog.workLog.timeTo)}
+                        Time: {formatDisplayTime(selectedLog.workLog.timeFrom)} – {formatDisplayTime(selectedLog.workLog.timeTo)} ({formatMinutes(selectedLog.workLog.spentMinutes)})
                       </span>
                       {selectedLog.workLog.hallSection && (
                         <>

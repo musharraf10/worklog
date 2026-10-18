@@ -41,26 +41,23 @@ export const SharedWorkLogs = ({ token, onAddRemark, remarksByTarget = {} }) => 
     };
   }, [token]);
 
-  // Selected Day logs
+  // Selected Day logs with search & status filter
   const selectedDayLogs = useMemo(() => {
     return logs
-      .filter((log) => formatDateForInput(log.date) === selectedDate)
+      .filter((log) => {
+        if (formatDateForInput(log.date) !== selectedDate) return false;
+        if (statusFilter !== 'ALL' && log.status !== statusFilter) return false;
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const matchesTask = (log.task || '').toLowerCase().includes(q);
+          const matchesCat = (log.category || '').toLowerCase().includes(q);
+          const matchesHall = (log.hallSection || '').toLowerCase().includes(q);
+          if (!matchesTask && !matchesCat && !matchesHall) return false;
+        }
+        return true;
+      })
       .sort((a, b) => (a.timeFrom || '').localeCompare(b.timeFrom || ''));
-  }, [logs, selectedDate]);
-
-  // All filtered logs for search / browse view
-  const filteredAllLogs = useMemo(() => {
-    return logs.filter((log) => {
-      const matchesSearch =
-        !searchQuery ||
-        log.task.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (log.hallSection || '').toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus =
-        statusFilter === 'ALL' || log.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [logs, searchQuery, statusFilter]);
+  }, [logs, selectedDate, statusFilter, searchQuery]);
 
   const totalSelectedMinutes = selectedDayLogs.reduce(
     (sum, l) => sum + (l.spentMinutes || 0),
@@ -225,6 +222,45 @@ export const SharedWorkLogs = ({ token, onAddRemark, remarksByTarget = {} }) => 
           <div className="rounded-xl border border-brand-primary/15 bg-brand-soft/30 p-3">
             <span className="text-xs font-semibold text-brand-dark/65">Pending / Other</span>
             <p className="text-lg font-extrabold text-brand-dark mt-0.5">{pendingCount}</p>
+          </div>
+        </div>
+
+        {/* Day Filter & Search Strip */}
+        <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search tasks for this day..."
+            className="flex-1 px-3 py-1.5 rounded-xl border border-brand-primary/30 bg-brand-soft/20 text-xs font-medium text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-primary"
+          />
+          <div className="flex items-center gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-brand-primary/30 bg-brand-soft/20 text-xs font-semibold text-brand-dark"
+              aria-label="Filter status for day"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="Completed">Completed</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Yet to Start">Yet to Start</option>
+              <option value="On Hold">On Hold</option>
+              <option value="Carry Forward">Carry Forward</option>
+              <option value="Not Done">Not Done</option>
+            </select>
+            {(searchQuery || statusFilter !== 'ALL') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('ALL');
+                }}
+                className="px-2.5 py-1 rounded-lg border border-brand-primary/30 text-xs font-semibold hover:bg-brand-soft"
+              >
+                Reset
+              </button>
+            )}
           </div>
         </div>
 
