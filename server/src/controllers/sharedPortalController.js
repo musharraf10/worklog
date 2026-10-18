@@ -295,6 +295,9 @@ const addSharedRemark = async (req, res) => {
       });
     }
 
+    let targetTitle = "";
+    let targetDate = null;
+
     // STRICT ISOLATION & VALIDATION CHECK (Test Case 11)
     if (targetType === "WorkLog") {
       const exists = await WorkLog.findOne({
@@ -308,6 +311,9 @@ const addSharedRemark = async (req, res) => {
           message: "Work Log record not found or does not belong to this portal",
         });
       }
+
+      targetTitle = exists.task;
+      targetDate = exists.date;
     } else if (targetType === "MentorLog") {
       const exists = await MentorLog.findOne({
         user: req.ownerUser._id,
@@ -320,15 +326,29 @@ const addSharedRemark = async (req, res) => {
           message: "Mentor Log record not found or does not belong to this portal",
         });
       }
+
+      const q = exists.questions?.id?.(targetId) || exists.questions?.find((item) => item._id.toString() === targetId);
+      if (q) {
+        targetTitle = `${exists.subject || "Mentoring"} — Q: ${q.question.slice(0, 60)}`;
+      } else {
+        targetTitle = `${exists.subject || "Mentoring Session"} (${exists.studentBatch || "General"})`;
+      }
+      targetDate = exists.createdAt;
+    } else {
+      targetTitle = `Report (${targetId})`;
     }
 
     const createdRemark = await ManagerRemark.create({
       shareLinkId: req.shareLink._id,
+      shareLinkLabel: req.shareLink?.label || "Manager Access",
       userId: req.ownerUser._id,
       targetType,
       targetId,
+      targetTitle,
+      targetDate,
       authorName: authorName?.trim() || "Manager",
       remark: remark.trim(),
+      isRead: false,
     });
 
     res.status(201).json({

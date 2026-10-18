@@ -360,6 +360,21 @@ export const subscribeToSyncState = (callback) => {
   return () => window.removeEventListener(SYNC_STATE_EVENT, handler);
 };
 
+const REMARKS_UPDATED_EVENT = 'worklog:remarks_updated';
+
+export const notifyRemarksUpdated = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(REMARKS_UPDATED_EVENT));
+  }
+};
+
+export const subscribeToRemarksUpdated = (callback) => {
+  if (typeof window === 'undefined') return () => {};
+  const handler = () => callback();
+  window.addEventListener(REMARKS_UPDATED_EVENT, handler);
+  return () => window.removeEventListener(REMARKS_UPDATED_EVENT, handler);
+};
+
 export const subscribeToLogsUpdated = (callback) => {
   if (typeof window === 'undefined') return () => {};
   const handler = () => callback();

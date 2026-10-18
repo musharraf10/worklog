@@ -36,6 +36,30 @@ export const shareLinkService = {
     const response = await api.get('/share-links/remarks', { params });
     return response.data;
   },
+
+  /**
+   * Mark a single remark as read
+   */
+  markRemarkAsRead: async (id) => {
+    const response = await api.patch(`/share-links/remarks/${id}/read`);
+    return response.data;
+  },
+
+  /**
+   * Mark all remarks as read for current user
+   */
+  markAllRemarksAsRead: async () => {
+    const response = await api.patch('/share-links/remarks/read-all');
+    return response.data;
+  },
+
+  /**
+   * Get unread remarks count for current user
+   */
+  getUnreadRemarksCount: async () => {
+    const response = await api.get('/share-links/remarks/unread-count');
+    return response.data;
+  },
 };
 
 export default shareLinkService;

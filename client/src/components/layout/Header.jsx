@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import SyncStatus from '../worklogs/SyncStatus';
 import SharePortalModal from '../share/SharePortalModal';
+import shareLinkService from '../../services/shareLinkService';
+import { subscribeToRemarksUpdated } from '../../utils/storageUtils';
 
 const PAGE_TITLES = {
   '/dashboard': 'Dashboard',
@@ -15,8 +17,44 @@ const PAGE_TITLES = {
 
 export const Header = ({ onOpenSidebar }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [unreadRemarks, setUnreadRemarks] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUnread = async () => {
+      try {
+        const res = await shareLinkService.getUnreadRemarksCount();
+        if (isMounted && res && typeof res.unreadCount === 'number') {
+          setUnreadRemarks(res.unreadCount);
+        }
+      } catch (err) {
+        // Silently catch in header
+      }
+    };
+
+    fetchUnread();
+    const unsubscribe = subscribeToRemarksUpdated(() => {
+      fetchUnread();
+    });
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const handleRemarksClick = () => {
+    if (location.pathname === '/dashboard') {
+      const el = document.getElementById('manager-remarks');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      navigate('/dashboard#manager-remarks');
+    }
+  };
 
   const title = PAGE_TITLES[location.pathname] || 'Work Log';
 
@@ -41,6 +79,24 @@ export const Header = ({ onOpenSidebar }) => {
         </div>
 
         <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 min-w-0 shrink-0">
+          {/* Manager Remarks Indicator */}
+          <button
+            type="button"
+            onClick={handleRemarksClick}
+            className="relative p-2 rounded-lg text-brand-dark/80 hover:text-brand-dark hover:bg-brand-soft/40 transition-colors shrink-0"
+            title={unreadRemarks > 0 ? `${unreadRemarks} unread manager remarks` : 'Manager Remarks'}
+            aria-label="Manager Remarks"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+            {unreadRemarks > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-amber-600 rounded-full ring-2 ring-brand-light">
+                {unreadRemarks > 99 ? '99+' : unreadRemarks}
+              </span>
+            )}
+          </button>
+
           {/* Share Portal Button */}
           <button
             type="button"

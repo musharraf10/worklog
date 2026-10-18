@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import StatCard from '../components/dashboard/StatCard';
 import WorkSummary from '../components/dashboard/WorkSummary';
 import RecentWorkLogs from '../components/dashboard/RecentWorkLogs';
+import ManagerRemarksSection from '../components/dashboard/ManagerRemarksSection';
 import Button from '../components/common/Button';
 import Loader from '../components/common/Loader';
 import workLogService from '../services/workLogService';
@@ -108,6 +109,17 @@ export const Dashboard = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isLoading && window.location.hash === '#manager-remarks') {
+      setTimeout(() => {
+        const el = document.getElementById('manager-remarks');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
+    }
+  }, [isLoading]);
+
   if (isLoading) {
     return <Loader size="lg" text="Loading dashboard metrics..." />;
   }
@@ -189,6 +201,8 @@ export const Dashboard = () => {
         monthlyMinutes={stats.monthlyMinutes}
         todayTasks={stats.todayTasks}
       />
+
+      <ManagerRemarksSection />
 
       <RecentWorkLogs logs={logs} />
     </div>

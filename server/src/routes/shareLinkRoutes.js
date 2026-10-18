@@ -5,6 +5,9 @@ const {
   getMyShareLinks,
   revokeShareLink,
   getMyRemarks,
+  markRemarkAsRead,
+  markAllRemarksAsRead,
+  getUnreadRemarksCount,
 } = require("../controllers/shareLinkController");
 
 const router = express.Router();
@@ -16,5 +19,8 @@ router.post("/", createShareLink);
 router.get("/", getMyShareLinks);
 router.post("/:id/revoke", revokeShareLink);
 router.get("/remarks", getMyRemarks);
+router.get("/remarks/unread-count", getUnreadRemarksCount);
+router.patch("/remarks/read-all", markAllRemarksAsRead);
+router.patch("/remarks/:id/read", markRemarkAsRead);
 
 module.exports = router;
