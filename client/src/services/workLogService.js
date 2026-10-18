@@ -15,7 +15,7 @@ let isSyncing = false;
 
 export const workLogService = {
   /** Fetch a bounded, optionally date-filtered work-log page and merge offline changes. */
-  async getWorkLogs(params = {}) {
+  async getWorkLogs(params = {}, options = {}) {
     const matches = (log) => {
       const logDate = formatDateForInput(log.date);
       if (params.date && logDate !== params.date) return false;
@@ -39,7 +39,7 @@ export const workLogService = {
       createdAt: new Date(item.timestamp).toISOString(),
     });
     try {
-      const response = await api.get('/worklogs', { params });
+      const response = await api.get('/worklogs', { params, signal: options.signal });
       const payload = response.data;
       const queue = getWorkLogQueue();
       const deletes = new Set(queue.filter((item) => item.type === 'DELETE').map((item) => item.id));
@@ -63,6 +63,9 @@ export const workLogService = {
       pagination.totalPages = Math.ceil(pagination.total / pagination.limit);
       return { ...payload, data, count: data.length, pagination, isFromCache: false };
     } catch (error) {
+      if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+        throw error;
+      }
       if (!isNetworkError(error)) throw error;
       const localCreates = getWorkLogQueue().filter((item) => item.type === 'CREATE').map(toLocalLog).filter(matches);
       const limit = Math.min(100, Number(params.limit) || 25);
