@@ -195,12 +195,12 @@ export const Dashboard = () => {
         />
       </div>
 
-      <WorkSummary
+      {/* <WorkSummary
         todayMinutes={stats.todayMinutes}
         weeklyMinutes={stats.weeklyMinutes}
         monthlyMinutes={stats.monthlyMinutes}
         todayTasks={stats.todayTasks}
-      />
+      /> */}
 
       <ManagerRemarksSection />
 
