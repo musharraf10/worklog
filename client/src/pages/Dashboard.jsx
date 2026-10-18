@@ -12,9 +12,7 @@ import {
   getTodayDateString,
   getStartOfWeek,
   getYearAndMonth,
-  formatDateForInput,
 } from '../utils/dateUtils';
-import { formatMinutes } from '../utils/timeUtils';
 
 export const Dashboard = () => {
   const [logs, setLogs] = useState([]);
@@ -38,7 +36,7 @@ export const Dashboard = () => {
       const { year, month } = getYearAndMonth();
 
       try {
-        const logsRes = await workLogService.getAllWorkLogs();
+        const logsRes = await workLogService.getWorkLogs({ page: 1, limit: 6 });
         const allLogs = logsRes.data || [];
 
         if (!isMounted) return;
@@ -75,37 +73,7 @@ export const Dashboard = () => {
             monthH = monthlyData.value.data.totalWorkedHours || '0m';
           }
         } catch (reportErr) {
-          console.warn('Report API error; falling back to local calculation:', reportErr);
-        }
-
-        if (todayM === 0 && todayT === 0 && allLogs.length > 0) {
-          const todayLogs = allLogs.filter(
-            (l) => formatDateForInput(l.date) === todayStr,
-          );
-          todayM = todayLogs.reduce((acc, l) => acc + (l.spentMinutes || 0), 0);
-          todayT = todayLogs.length;
-          todayH = formatMinutes(todayM);
-        }
-
-        if (weekM === 0 && allLogs.length > 0) {
-          const weekStart = new Date(weekStartStr);
-          const weekLogs = allLogs.filter((l) => {
-            const d = new Date(formatDateForInput(l.date));
-            return d >= weekStart;
-          });
-          weekM = weekLogs.reduce((acc, l) => acc + (l.spentMinutes || 0), 0);
-          weekH = formatMinutes(weekM);
-        }
-
-        if (monthM === 0 && allLogs.length > 0) {
-          const monthLogs = allLogs.filter((l) => {
-            const dateInput = formatDateForInput(l.date);
-            if (!dateInput) return false;
-            const [y, m] = dateInput.split('-').map(Number);
-            return y === year && m === month;
-          });
-          monthM = monthLogs.reduce((acc, l) => acc + (l.spentMinutes || 0), 0);
-          monthH = formatMinutes(monthM);
+          console.warn('Report API request failed:', reportErr);
         }
 
         setStats({

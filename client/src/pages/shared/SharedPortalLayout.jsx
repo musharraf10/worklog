@@ -68,6 +68,7 @@ export const SharedPortalLayout = () => {
 
   // Mobile menu dropdown open state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeStatusHint, setActiveStatusHint] = useState(null);
 
   // Add remark modal state
   const [remarkModal, setRemarkModal] = useState({
@@ -250,38 +251,43 @@ export const SharedPortalLayout = () => {
   return (
     <div className="min-h-screen bg-brand-light font-sans text-brand-dark flex flex-col w-full overflow-x-hidden">
       {/* 1. HIERARCHY LEVEL 1: TOP BANNER (Shared Access, Expiry, Remarks Permission) */}
-      <header className="bg-brand-dark text-brand-light px-3.5 py-2.5 sm:px-6 shadow-sm border-b border-brand-primary/30 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2 py-0.5 rounded-md bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[11px] sm:text-xs font-extrabold uppercase tracking-wider">
-              Shared Portal — Read Only
-            </span>
-            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Remarks Enabled
-            </span>
-            <span className="text-xs sm:text-sm font-semibold text-brand-light/85 truncate">
-              Viewing Work Log of <strong className="text-brand-light">{owner?.name || 'User'}</strong>
-            </span>
+      <header className="bg-brand-dark text-brand-light px-4 py-3 sm:px-6 shadow-sm border-b border-brand-primary/30 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-2 sm:flex-nowrap">
+          <div className="group relative">
+            <button type="button" title="Shared Portal — Read Only" aria-label="Shared Portal — Read Only" aria-expanded={activeStatusHint === 'access'} onClick={() => setActiveStatusHint(activeStatusHint === 'access' ? null : 'access')} className="min-h-8 inline-flex items-center px-2.5 py-1 rounded-md bg-amber-400/20 border border-amber-400/40 text-amber-300 text-xs font-extrabold uppercase tracking-wider">
+              <span className="hidden sm:inline">Shared Portal — Read Only</span><span className="sm:hidden">Read-only</span>
+            </button>
+            {activeStatusHint === 'access' && <span role="tooltip" className="absolute left-0 top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-lg bg-brand-light px-3 py-2 text-xs font-semibold text-brand-dark shadow-lg">Shared Portal — Read Only</span>}
           </div>
-
-          <div className="flex items-center gap-2.5 text-xs text-brand-light/75 self-start sm:self-auto">
-            {portalMeta?.expiresAt && (
-              <span className="flex items-center gap-1 font-medium bg-brand-light/10 px-2.5 py-1 rounded-lg">
-                <svg className="w-3.5 h-3.5 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {remainingTimeStr}
-              </span>
-            )}
+          <div className="group relative">
+            <button type="button" title="Remarks Enabled" aria-label="Remarks Enabled" aria-expanded={activeStatusHint === 'remarks'} onClick={() => setActiveStatusHint(activeStatusHint === 'remarks' ? null : 'remarks')} className="min-h-8 inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold uppercase tracking-wider gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span className="hidden sm:inline">Remarks Enabled</span><span className="sm:hidden">Remarks</span>
+            </button>
+            {activeStatusHint === 'remarks' && <span role="tooltip" className="absolute left-0 top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-lg bg-brand-light px-3 py-2 text-xs font-semibold text-brand-dark shadow-lg">Remarks are enabled for this portal</span>}
           </div>
+          <div className="group relative">
+            <button type="button" title={`Viewing Work Log of ${owner?.name || 'User'}`} aria-label={`Viewing Work Log of ${owner?.name || 'User'}`} aria-expanded={activeStatusHint === 'viewer'} onClick={() => setActiveStatusHint(activeStatusHint === 'viewer' ? null : 'viewer')} className="min-h-8 inline-flex items-center gap-1.5 rounded-lg bg-brand-light/10 px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-brand-light/90 max-w-full">
+              <svg className="h-3.5 w-3.5 shrink-0 text-brand-light/70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              <span className="truncate">Viewing: {owner?.name || 'User'}</span>
+            </button>
+            {activeStatusHint === 'viewer' && <span role="tooltip" className="absolute left-0 top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-lg bg-brand-light px-3 py-2 text-xs font-semibold text-brand-dark shadow-lg">Viewing Work Log of {owner?.name || 'User'}</span>}
+          </div>
+          {portalMeta?.expiresAt && (
+            <div className="group relative sm:ml-auto">
+              <button type="button" title={`Access expires in ${remainingTimeStr}`} aria-label={`Access expires in ${remainingTimeStr}`} aria-expanded={activeStatusHint === 'expiry'} onClick={() => setActiveStatusHint(activeStatusHint === 'expiry' ? null : 'expiry')} className="min-h-8 inline-flex items-center gap-1.5 font-medium bg-brand-light/10 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm text-brand-light/75">
+                <svg className="w-3.5 h-3.5 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span className="sm:hidden">{remainingTimeStr.replace(' remaining', '')}</span><span className="hidden sm:inline">{remainingTimeStr}</span>
+              </button>
+              {activeStatusHint === 'expiry' && <span role="tooltip" className="absolute right-0 top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-lg bg-brand-light px-3 py-2 text-xs font-semibold text-brand-dark shadow-lg">Access expires in {remainingTimeStr}</span>}
+            </div>
+          )}
         </div>
       </header>
 
       {/* 2. HIERARCHY LEVEL 2: PORTAL IDENTITY AND NAVIGATION */}
       <nav
         aria-label="Portal Navigation"
-        className="bg-brand-light/95 backdrop-blur-xs border-b border-brand-primary/20 px-3.5 sm:px-6 py-2.5 sticky top-[45px] sm:top-[49px] z-30"
+        className="bg-brand-light/95 backdrop-blur-xs border-b border-brand-primary/20 px-4 sm:px-6 py-2.5 sticky top-[88px] sm:top-[49px] z-30"
       >
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Brand mark & Owner identity */}

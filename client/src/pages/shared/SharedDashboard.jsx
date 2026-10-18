@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import StatCard from '../../components/dashboard/StatCard';
-import WorkSummary from '../../components/dashboard/WorkSummary';
 import sharedPortalService from '../../services/sharedPortalService';
 import RemarkList from '../../components/share/RemarkList';
 import {
@@ -184,18 +183,15 @@ export const SharedDashboard = ({
             }
           />
         </div>
+        {error && (
+          <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900">
+            <span>{error}</span>
+            <button type="button" onClick={fetchDashboardData} className="ml-3 font-bold underline underline-offset-2">
+              Retry
+            </button>
+          </div>
+        )}
 
-        {/* Daily Work Overview (guaranteed consistent totals, loading indicator, retry) */}
-        <WorkSummary
-          todayMinutes={stats.todayMinutes}
-          weeklyMinutes={stats.weeklyMinutes}
-          monthlyMinutes={stats.monthlyMinutes}
-          todayTasks={stats.todayTasks}
-          logs={logs}
-          isLoading={isLoading}
-          error={error}
-          onRetry={fetchDashboardData}
-        />
       </section>
 
       {/* SECTION 2: MANAGER REVIEW AREA */}

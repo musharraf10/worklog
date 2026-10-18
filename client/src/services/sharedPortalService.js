@@ -20,8 +20,8 @@ export const sharedPortalService = {
   /**
    * Get all work logs for the shared portal
    */
-  getWorkLogs: async (token) => {
-    const response = await client.get(`/shared/${token}/worklogs`);
+  getWorkLogs: async (token, params = {}) => {
+    const response = await client.get(`/shared/${token}/worklogs`, { params });
     return response.data;
   },
 

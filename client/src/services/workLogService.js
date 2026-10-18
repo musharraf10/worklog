@@ -9,10 +9,70 @@ import {
   getTotalPendingCount,
 } from '../utils/storageUtils';
 import { calculateSpentMinutes } from '../utils/timeUtils';
+import { formatDateForInput } from '../utils/dateUtils';
 
 let isSyncing = false;
 
 export const workLogService = {
+  /** Fetch a bounded, optionally date-filtered work-log page and merge offline changes. */
+  async getWorkLogs(params = {}) {
+    const matches = (log) => {
+      const logDate = formatDateForInput(log.date);
+      if (params.date && logDate !== params.date) return false;
+      if (params.startDate && logDate < params.startDate) return false;
+      if (params.endDate && logDate > params.endDate) return false;
+      if (params.status && params.status !== 'ALL' && log.status !== params.status) return false;
+      if (params.category && params.category !== 'ALL' && log.category !== params.category) return false;
+      if (params.priority && params.priority !== 'ALL' && log.priority !== params.priority) return false;
+      if (params.search?.trim()) {
+        const query = params.search.trim().toLowerCase();
+        if (!['task', 'category', 'activityType', 'hallSection', 'remarks'].some((field) => (log[field] || '').toLowerCase().includes(query))) return false;
+      }
+      return true;
+    };
+    const toLocalLog = (item) => ({
+      _id: item.id,
+      ...item.payload,
+      spentMinutes: calculateSpentMinutes(item.payload.timeFrom, item.payload.timeTo),
+      googleSheetSyncStatus: item.sheetsPending ? 'failed' : 'pending',
+      isLocal: true,
+      createdAt: new Date(item.timestamp).toISOString(),
+    });
+    try {
+      const response = await api.get('/worklogs', { params });
+      const payload = response.data;
+      const queue = getWorkLogQueue();
+      const deletes = new Set(queue.filter((item) => item.type === 'DELETE').map((item) => item.id));
+      const updates = new Map(queue.filter((item) => item.type === 'UPDATE').map((item) => [item.id, item]));
+      const localCreates = queue.filter((item) => item.type === 'CREATE').map(toLocalLog).filter(matches);
+      const serverLogs = (payload.data || []).filter((log) => !deletes.has(log._id)).map((log) => {
+        const operation = updates.get(log._id);
+        if (!operation) return log;
+        const update = operation.payload || {};
+        return {
+          ...log,
+          ...update,
+          spentMinutes: calculateSpentMinutes(update.timeFrom || log.timeFrom, update.timeTo || log.timeTo),
+          googleSheetSyncStatus: operation.sheetsPending ? 'failed' : log.googleSheetSyncStatus || 'pending',
+          isLocal: true,
+        };
+      }).filter(matches);
+      const data = [...localCreates, ...serverLogs].sort((a, b) => new Date(b.date) - new Date(a.date) || (a.timeFrom || '').localeCompare(b.timeFrom || ''));
+      const pagination = payload.pagination || { page: 1, limit: data.length, total: data.length, totalPages: 1 };
+      pagination.total += localCreates.length;
+      pagination.totalPages = Math.ceil(pagination.total / pagination.limit);
+      return { ...payload, data, count: data.length, pagination, isFromCache: false };
+    } catch (error) {
+      if (!isNetworkError(error)) throw error;
+      const localCreates = getWorkLogQueue().filter((item) => item.type === 'CREATE').map(toLocalLog).filter(matches);
+      const limit = Math.min(100, Number(params.limit) || 25);
+      const page = Math.max(1, Number(params.page) || 1);
+      const start = (page - 1) * limit;
+      const data = localCreates.slice(start, start + limit);
+      return { success: true, count: data.length, data, pagination: { page, limit, total: localCreates.length, totalPages: Math.ceil(localCreates.length / limit) }, isFromCache: true };
+    }
+  },
+
   /**
    * Fetch all work logs for the logged-in user.
    * Merges server data with any pending offline operations in-memory.

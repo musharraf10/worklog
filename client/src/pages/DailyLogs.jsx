@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import WorkLogForm from '../components/worklogs/WorkLogForm';
 import WorkLogsCalendar from '../components/worklogs/WorkLogsCalendar';
 import WorkLogGroup from '../components/worklogs/WorkLogGroup';
@@ -42,22 +42,59 @@ const FloatingCalendar = ({ month, selectedDate, logs, onMonthChange, onSelectDa
 
 export default function DailyLogs() {
   const today = getTodayDateString();
-  const [logs, setLogs] = useState([]); const [selectedDate, setSelectedDate] = useState(today); const [month, setMonth] = useState(new Date(`${today}T00:00:00`));
-  const [view, setView] = useState('form'); const [calendarOpen, setCalendarOpen] = useState(false); const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false); const [deleting, setDeleting] = useState(null); const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const { syncStatus, pendingCount } = useAuth();
-  const load = async () => { setError(''); try { const response = await workLogService.getAllWorkLogs(); setLogs(response.data || []); } catch (err) { setError(err.response?.data?.message || 'Unable to load work logs.'); } finally { setLoading(false); } };
-  useEffect(() => { load(); return subscribeToLogsUpdated(load); }, []);
-  const selectedLogs = useMemo(() => logs.filter(log => formatDateForInput(log.date) === selectedDate).sort((a, b) => (a.timeFrom || '').localeCompare(b.timeFrom || '')), [logs, selectedDate]);
+  const [logs, setLogs] = useState([]); const [todayLogs, setTodayLogs] = useState([]); const [calendarLogs, setCalendarLogs] = useState([]); const [selectedDate, setSelectedDate] = useState(today); const [month, setMonth] = useState(new Date(`${today}T00:00:00`));
+  const [view, setView] = useState('form'); const [calendarOpen, setCalendarOpen] = useState(false); const [loading, setLoading] = useState(true); const [retryCount, setRetryCount] = useState(0); const [saving, setSaving] = useState(false); const [deleting, setDeleting] = useState(null); const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const { syncStatus, pendingCount } = useAuth();
+  const fetchDateLogs = useCallback(async (date) => {
+    const response = await workLogService.getWorkLogs({ date, page: 1, limit: 100 });
+    return response.data || [];
+  }, []);
+  useEffect(() => {
+    let active = true;
+    setLoading(true); setError('');
+    fetchDateLogs(selectedDate).then(dayLogs => {
+      if (active) { setLogs(dayLogs); if (selectedDate === today) setTodayLogs(dayLogs); }
+    }).catch(err => { if (active) setError(err.response?.data?.message || 'Unable to load work logs.'); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [fetchDateLogs, selectedDate, today, retryCount]);
+  useEffect(() => {
+    if (view !== 'form' || selectedDate === today) return undefined;
+    let active = true;
+    fetchDateLogs(today).then(dayLogs => { if (active) setTodayLogs(dayLogs); }).catch(err => console.warn('Unable to refresh today timeline:', err));
+    return () => { active = false; };
+  }, [fetchDateLogs, selectedDate, today, view]);
+  useEffect(() => {
+    if (!calendarOpen) return undefined;
+    let active = true;
+    const year = month.getFullYear(); const monthIndex = month.getMonth();
+    const gridStart = new Date(year, monthIndex, 1 - new Date(year, monthIndex, 1).getDay());
+    const startDate = formatDateForInput(gridStart);
+    const endDate = formatDateForInput(new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + 41));
+    workLogService.getWorkLogs({ startDate, endDate, page: 1, limit: 100 }).then(response => { if (active) setCalendarLogs(response.data || []); }).catch(err => console.warn('Unable to load calendar dates:', err));
+    return () => { active = false; };
+  }, [calendarOpen, month]);
+  useEffect(() => subscribeToLogsUpdated(() => {
+    fetchDateLogs(selectedDate).then(dayLogs => { setLogs(dayLogs); if (selectedDate === today) setTodayLogs(dayLogs); }).catch(err => setError(err.response?.data?.message || 'Unable to refresh work logs.'));
+    if (view === 'form' && selectedDate !== today) fetchDateLogs(today).then(setTodayLogs).catch(() => {});
+    if (calendarOpen) {
+      const year = month.getFullYear(); const monthIndex = month.getMonth();
+      const gridStart = new Date(year, monthIndex, 1 - new Date(year, monthIndex, 1).getDay());
+      const startDate = formatDateForInput(gridStart);
+      const endDate = formatDateForInput(new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + 41));
+      workLogService.getWorkLogs({ startDate, endDate, page: 1, limit: 100 }).then(response => setCalendarLogs(response.data || [])).catch(() => {});
+    }
+  }), [fetchDateLogs, selectedDate, today, view, calendarOpen, month]);
+  const selectedLogs = useMemo(() => [...logs].sort((a, b) => (a.timeFrom || '').localeCompare(b.timeFrom || '')), [logs]);
   const total = selectedLogs.reduce((sum, log) => sum + (log.spentMinutes || 0), 0); const completed = selectedLogs.filter(log => log.status === 'Completed').length; const active = selectedLogs.filter(log => log.status === 'In Progress').length; const pending = selectedLogs.filter(log => ['Yet to Start', 'On Hold', 'Carry Forward', 'Not Done'].includes(log.status)).length;
-  const create = async data => { setSaving(true); try { const result = await workLogService.createWorkLog(data); setSelectedDate(data.date); setMonth(new Date(`${data.date}T00:00:00`)); setNotice(result?.isLocal ? 'Saved locally — syncing when online' : 'Work log saved'); await load(); } catch (err) { setNotice(err.response?.data?.message || 'Unable to save work log'); } finally { setSaving(false); } };
-  const update = async (id, data) => { try { await workLogService.updateWorkLog(id, data); setNotice('Work log updated'); await load(); } catch (err) { setNotice(err.response?.data?.message || 'Unable to update work log'); throw err; } };
-  const remove = async () => { try { await workLogService.deleteWorkLog(deleting._id); setNotice('Work log deleted'); setDeleting(null); await load(); } catch (err) { setNotice(err.response?.data?.message || 'Unable to delete work log'); } };
+  const create = async data => { setSaving(true); try { const result = await workLogService.createWorkLog(data); setSelectedDate(data.date); setMonth(new Date(`${data.date}T00:00:00`)); setNotice(result?.isLocal ? 'Saved locally — syncing when online' : 'Work log saved'); } catch (err) { setNotice(err.response?.data?.message || 'Unable to save work log'); } finally { setSaving(false); } };
+  const update = async (id, data) => { try { await workLogService.updateWorkLog(id, data); setNotice('Work log updated'); } catch (err) { setNotice(err.response?.data?.message || 'Unable to update work log'); throw err; } };
+  const remove = async () => { try { await workLogService.deleteWorkLog(deleting._id); setNotice('Work log deleted'); setDeleting(null); } catch (err) { setNotice(err.response?.data?.message || 'Unable to delete work log'); } };
   const statusText = syncStatus === 'failed' ? 'Sync failed' : syncStatus === 'pending' ? 'Pending' : syncStatus === 'syncing' ? 'Syncing' : 'Synced';
   if (loading) return <div className="animate-pulse"><div className="h-8 w-44 rounded bg-brand-soft"/><div className="mt-7 h-[500px] rounded-2xl bg-brand-soft/40"/></div>;
-  if (error) return <section className="py-16 text-center" role="alert"><h1 className="text-xl font-bold text-brand-dark">Unable to load work logs</h1><p className="mt-2 text-brand-dark/70">{error}</p><button onClick={() => { setLoading(true); load(); }} className="mt-5 rounded-lg bg-brand-dark px-4 py-2 text-sm font-bold text-brand-light">Retry</button></section>;
+  if (error) return <section className="py-16 text-center" role="alert"><h1 className="text-xl font-bold text-brand-dark">Unable to load work logs</h1><p className="mt-2 text-brand-dark/70">{error}</p><button onClick={() => { setLoading(true); setRetryCount(value => value + 1); }} className="mt-5 rounded-lg bg-brand-dark px-4 py-2 text-sm font-bold text-brand-light">Retry</button></section>;
   return <div className="space-y-5 sm:space-y-6">
     <header className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-brand-primary/20 bg-brand-light p-4 shadow-xs sm:p-6"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-brand-primary">Daily workspace</p><h1 className="mt-1 text-2xl font-bold tracking-tight text-brand-dark sm:text-3xl">{view === 'form' ? 'Log your work' : 'Your work logs'}</h1><p className="mt-1 max-w-xl text-sm text-brand-dark/70 sm:text-base">{view === 'form' ? 'Add a focused record first. Your calendar and previous entries stay one tap away.' : 'Browse any day, review its entries, and return to the form when you are ready.'}</p></div><div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => setView(view === 'form' ? 'logs' : 'form')} className="inline-flex items-center gap-2 rounded-lg border border-brand-dark/20 bg-brand-soft/40 px-3 py-2 text-sm font-semibold text-brand-dark transition hover:bg-brand-soft"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 4h7" /></svg>{view === 'form' ? 'Show logs' : 'Add work log'}</button><span className="rounded-full bg-brand-soft px-3 py-2 text-sm font-semibold text-brand-dark"><i className={`mr-2 inline-block h-2 w-2 rounded-full ${syncStatus === 'failed' ? 'bg-red-500' : syncStatus === 'pending' ? 'bg-amber-500' : 'bg-emerald-600'}`}/>{statusText}{pendingCount ? ` · ${pendingCount}` : ''}</span></div></header>
-    <div className="worklog-flip-stage" aria-live="polite"><div key={view} className="worklog-flip-panel">{view === 'form' ? <div className="mx-auto grid max-w-7xl items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]"><WorkLogForm initialDate={selectedDate} onSubmit={create} isLoading={saving}/><TodayTimeline logs={logs.filter(log => formatDateForInput(log.date) === today).sort((a, b) => (a.timeFrom || '').localeCompare(b.timeFrom || ''))}/></div> : <div className="space-y-5"><DateStrip selectedDate={selectedDate} onSelectDate={date => { setSelectedDate(date); setMonth(new Date(`${date}T00:00:00`)); }} onToday={() => { setSelectedDate(today); setMonth(new Date(`${today}T00:00:00`)); }} onOpenCalendar={() => setCalendarOpen(true)}/><DaySummary selectedDate={selectedDate} selectedLogs={selectedLogs} total={total} completed={completed} active={active} pending={pending} onAddLog={() => setView('form')} onSave={update} onDelete={setDeleting}/></div>}</div></div>
-    {calendarOpen && <FloatingCalendar month={month} selectedDate={selectedDate} logs={logs} onMonthChange={setMonth} onSelectDate={date => { setSelectedDate(date); setMonth(new Date(`${date}T00:00:00`)); }} onClose={() => setCalendarOpen(false)}/>} 
+    <div className="worklog-flip-stage" aria-live="polite"><div key={view} className="worklog-flip-panel">{view === 'form' ? <div className="mx-auto grid max-w-7xl items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]"><WorkLogForm initialDate={selectedDate} onSubmit={create} isLoading={saving}/><TodayTimeline logs={todayLogs}/></div> : <div className="space-y-5"><DateStrip selectedDate={selectedDate} onSelectDate={date => { setSelectedDate(date); setMonth(new Date(`${date}T00:00:00`)); }} onToday={() => { setSelectedDate(today); setMonth(new Date(`${today}T00:00:00`)); }} onOpenCalendar={() => setCalendarOpen(true)}/><DaySummary selectedDate={selectedDate} selectedLogs={selectedLogs} total={total} completed={completed} active={active} pending={pending} onAddLog={() => setView('form')} onSave={update} onDelete={setDeleting}/></div>}</div></div>
+    {calendarOpen && <FloatingCalendar month={month} selectedDate={selectedDate} logs={calendarLogs} onMonthChange={setMonth} onSelectDate={date => { setSelectedDate(date); setMonth(new Date(`${date}T00:00:00`)); }} onClose={() => setCalendarOpen(false)}/>}
     {notice && <div role="status" className="fixed bottom-5 right-5 z-40 max-w-[calc(100vw-2.5rem)] rounded-lg bg-brand-dark px-4 py-3 text-sm font-semibold text-brand-light shadow-lg">{notice}<button className="ml-4" onClick={() => setNotice('')} aria-label="Dismiss notification">×</button></div>}
     <ConfirmDialog isOpen={Boolean(deleting)} onClose={() => setDeleting(null)} onConfirm={remove} title="Delete this work log?" message="This action cannot be undone." confirmText="Delete" variant="danger"/>
   </div>;

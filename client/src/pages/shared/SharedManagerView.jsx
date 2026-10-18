@@ -18,6 +18,7 @@ import {
   MONTH_NAMES,
 } from '../../utils/dateUtils';
 import { formatMinutes, formatDisplayTime } from '../../utils/timeUtils';
+import { useDebounce } from '../../hooks/useDebounce';
 
 export const SharedManagerView = ({
   token,
@@ -29,6 +30,8 @@ export const SharedManagerView = ({
 
   // Work Logs State
   const [logs, setLogs] = useState([]);
+  const [workLogPagination, setWorkLogPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 1 });
+  const [workLogSummary, setWorkLogSummary] = useState({ totalTasks: 0, totalWorkedMinutes: 0, completedCount: 0, inProgressCount: 0, pendingCount: 0 });
   const [isLogsLoading, setIsLogsLoading] = useState(true);
   const [logsError, setLogsError] = useState(null);
 
@@ -63,7 +66,8 @@ export const SharedManagerView = ({
 
   // Pagination for Work Logs Table
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15); // 10, 15, 25, 50, 0 (all)
+  const [pageSize, setPageSize] = useState(25);
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Mobile Table View Mode toggle: 'cards' or 'table'
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
@@ -77,15 +81,36 @@ export const SharedManagerView = ({
     setIsLogsLoading(true);
     setLogsError(null);
     try {
-      const res = await sharedPortalService.getWorkLogs(token);
+      const today = getTodayDateString();
+      const weekStart = getStartOfWeek(today);
+      const weekEnd = addDays(weekStart, 6);
+      const { year, month } = getYearAndMonth();
+      const params = {
+        page: currentPage,
+        limit: pageSize,
+        search: debouncedSearch.trim(),
+        category: categoryFilter,
+        status: statusFilter,
+        priority: priorityFilter,
+      };
+      if (dateFilterPreset === 'TODAY') params.date = today;
+      if (dateFilterPreset === 'CUSTOM' && customDate) params.date = customDate;
+      if (dateFilterPreset === 'WEEK') Object.assign(params, { startDate: weekStart, endDate: weekEnd });
+      if (dateFilterPreset === 'MONTH') Object.assign(params, {
+        startDate: `${year}-${String(month).padStart(2, '0')}-01`,
+        endDate: `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`,
+      });
+      const res = await sharedPortalService.getWorkLogs(token, params);
       setLogs(res.data || []);
+      setWorkLogPagination(res.pagination || { page: currentPage, limit: pageSize, total: res.count || 0, totalPages: 1 });
+      setWorkLogSummary(res.summary || { totalTasks: res.count || 0, totalWorkedMinutes: 0, completedCount: 0, inProgressCount: 0, pendingCount: 0 });
     } catch (err) {
       console.error('Manager View fetch logs error:', err);
       setLogsError('Failed to load work logs. Please try again.');
     } finally {
       setIsLogsLoading(false);
     }
-  }, [token]);
+  }, [token, currentPage, pageSize, debouncedSearch, dateFilterPreset, customDate, categoryFilter, statusFilter, priorityFilter]);
 
   // 2. Fetch Mentor Logs
   const fetchMentorLogs = useCallback(async () => {
@@ -168,69 +193,8 @@ export const SharedManagerView = ({
     };
   }, [managerTab, reportPeriod, dailyDate, weeklyStart, monthlyYear, monthlyMonth, token]);
 
-  // Filtered Work Logs
-  const filteredLogs = useMemo(() => {
-    const today = getTodayDateString();
-    const weekStart = getStartOfWeek(today);
-    const weekEnd = addDays(weekStart, 6);
-    const { year, month } = getYearAndMonth();
-
-    return logs.filter((log) => {
-      const logDate = formatDateForInput(log.date);
-
-      // Date preset filter
-      if (dateFilterPreset === 'TODAY' && logDate !== today) return false;
-      if (dateFilterPreset === 'WEEK' && (logDate < weekStart || logDate > weekEnd)) return false;
-      if (dateFilterPreset === 'MONTH') {
-        if (!logDate) return false;
-        const [y, m] = logDate.split('-').map(Number);
-        if (y !== year || m !== month) return false;
-      }
-      if (dateFilterPreset === 'CUSTOM' && customDate && logDate !== customDate) return false;
-
-      // Category filter
-      if (categoryFilter !== 'ALL' && log.category !== categoryFilter) return false;
-
-      // Status filter
-      if (statusFilter !== 'ALL' && log.status !== statusFilter) return false;
-
-      // Priority filter
-      if (priorityFilter !== 'ALL' && log.priority !== priorityFilter) return false;
-
-      // Search Query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesTask = (log.task || '').toLowerCase().includes(q);
-        const matchesCategory = (log.category || '').toLowerCase().includes(q);
-        const matchesActivity = (log.activityType || '').toLowerCase().includes(q);
-        const matchesHall = (log.hallSection || '').toLowerCase().includes(q);
-        const matchesRemarks = (log.remarks || '').toLowerCase().includes(q);
-        if (!matchesTask && !matchesCategory && !matchesActivity && !matchesHall && !matchesRemarks) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [
-    logs,
-    dateFilterPreset,
-    customDate,
-    categoryFilter,
-    statusFilter,
-    priorityFilter,
-    searchQuery,
-  ]);
-
-  // Sort logs chronologically (newest dates first, then by start time)
-  const sortedFilteredLogs = useMemo(() => {
-    return [...filteredLogs].sort((a, b) => {
-      const dateA = a.date ? new Date(a.date).getTime() : 0;
-      const dateB = b.date ? new Date(b.date).getTime() : 0;
-      if (dateB !== dateA) return dateB - dateA;
-      return (a.timeFrom || '').localeCompare(b.timeFrom || '');
-    });
-  }, [filteredLogs]);
+  const filteredLogs = logs;
+  const sortedFilteredLogs = logs;
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -241,36 +205,25 @@ export const SharedManagerView = ({
     categoryFilter,
     statusFilter,
     priorityFilter,
-    searchQuery,
+    debouncedSearch,
     pageSize,
   ]);
 
   // Pagination calculation
-  const totalItems = sortedFilteredLogs.length;
-  const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(totalItems / pageSize)) : 1;
-  const paginatedLogs = useMemo(() => {
-    if (pageSize <= 0) return sortedFilteredLogs;
-    const startIndex = (currentPage - 1) * pageSize;
-    return sortedFilteredLogs.slice(startIndex, startIndex + pageSize);
-  }, [sortedFilteredLogs, currentPage, pageSize]);
+  const totalItems = workLogPagination.total;
+  const totalPages = workLogPagination.totalPages || 1;
+  const paginatedLogs = logs;
 
   // Metrics for filtered work logs
   const metrics = useMemo(() => {
-    const totalMinutes = filteredLogs.reduce((acc, l) => acc + (l.spentMinutes || 0), 0);
-    const completedCount = filteredLogs.filter((l) => l.status === 'Completed').length;
-    const inProgressCount = filteredLogs.filter((l) => l.status === 'In Progress').length;
-    const pendingCount = filteredLogs.filter(
-      (l) => ['Yet to Start', 'On Hold', 'Carry Forward', 'Not Done'].includes(l.status),
-    ).length;
-
     return {
-      totalTasks: filteredLogs.length,
-      totalWorkedStr: formatMinutes(totalMinutes),
-      completedCount,
-      inProgressCount,
-      pendingCount,
+      totalTasks: workLogSummary.totalTasks,
+      totalWorkedStr: formatMinutes(workLogSummary.totalWorkedMinutes),
+      completedCount: workLogSummary.completedCount,
+      inProgressCount: workLogSummary.inProgressCount,
+      pendingCount: workLogSummary.pendingCount,
     };
-  }, [filteredLogs]);
+  }, [workLogSummary]);
 
   // Reset all filters
   const handleResetFilters = () => {

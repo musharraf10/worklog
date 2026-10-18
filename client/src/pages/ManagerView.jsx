@@ -10,6 +10,10 @@ export const ManagerView = () => {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 1 });
+  const [summary, setSummary] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
 
   const [retryTrigger, setRetryTrigger] = useState(0);
 
@@ -17,10 +21,14 @@ export const ManagerView = () => {
     let isCancelled = false;
 
     const fetchLogs = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
-        const response = await workLogService.getAllWorkLogs();
+        const response = await workLogService.getWorkLogs({ page, limit });
         if (!isCancelled) {
           setLogs(response.data || []);
+          setPagination(response.pagination || { page, limit, total: response.count || 0, totalPages: 1 });
+          setSummary(response.summary || null);
           setError(null);
         }
       } catch (err) {
@@ -47,7 +55,7 @@ export const ManagerView = () => {
       isCancelled = true;
       unsubscribe();
     };
-  }, [retryTrigger]);
+  }, [retryTrigger, page, limit]);
 
   const handleRetry = () => {
     setIsLoading(true);
@@ -84,13 +92,17 @@ export const ManagerView = () => {
 
   // Summary strip metrics
   const metrics = useMemo(() => {
-    const totalTasks = logs.length;
-    const totalMinutes = logs.reduce((acc, log) => acc + (log.spentMinutes || 0), 0);
-    const completedCount = logs.filter((log) => log.status === 'Completed').length;
-    const pendingCount = logs.filter((log) => log.status !== 'Completed').length;
+    const totalTasks = summary?.totalTasks ?? pagination.total;
+    const totalMinutes = summary?.totalWorkedMinutes ?? logs.reduce((acc, log) => acc + (log.spentMinutes || 0), 0);
+    const completedCount = summary?.completedCount ?? logs.filter((log) => log.status === 'Completed').length;
+    const pendingCount = summary?.pendingCount ?? logs.filter((log) => log.status !== 'Completed').length;
 
     let dateRange = '—';
-    if (logs.length > 0) {
+    if (summary?.minDate && summary?.maxDate) {
+      const minDateStr = formatDate(new Date(summary.minDate));
+      const maxDateStr = formatDate(new Date(summary.maxDate));
+      dateRange = minDateStr === maxDateStr ? minDateStr : `${minDateStr} – ${maxDateStr}`;
+    } else if (logs.length > 0) {
       const validDates = logs
         .map((l) => (l.date ? new Date(l.date).getTime() : null))
         .filter((t) => t && !Number.isNaN(t));
@@ -111,7 +123,7 @@ export const ManagerView = () => {
       pendingCount,
       dateRange,
     };
-  }, [logs]);
+  }, [logs, summary, pagination.total]);
 
   const getPriorityBadgeClass = (priority) => {
     switch (priority) {
@@ -260,7 +272,7 @@ export const ManagerView = () => {
                   className="even:bg-brand-light odd:bg-brand-soft/15 hover:bg-brand-primary/15 transition-colors border-b border-brand-dark/15 text-sm"
                 >
                   <td className="text-center py-2 px-2 border-r border-brand-dark/15 text-xs font-mono text-brand-dark/60">
-                    {index + 1}
+                    {(page - 1) * limit + index + 1}
                   </td>
                   <td className="py-2 px-3 border-r border-brand-dark/15 whitespace-nowrap font-medium text-brand-dark/90">
                     {formatDate(log.date)}
@@ -303,6 +315,20 @@ export const ManagerView = () => {
               ))}
             </tbody>
           </table>
+        )}
+        {!isLoading && !error && pagination.total > 0 && (
+          <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-brand-dark/20 bg-brand-light/95 px-4 py-3 text-xs font-medium text-brand-dark/80">
+            <span>Showing {(page - 1) * limit + 1}–{Math.min(page * limit, pagination.total)} of {pagination.total} work logs</span>
+            <div className="flex items-center gap-2">
+              <label htmlFor="manager-page-size">Rows</label>
+              <select id="manager-page-size" value={limit} onChange={(event) => { setLimit(Number(event.target.value)); setPage(1); }} className="rounded border border-brand-dark/20 bg-brand-light px-2 py-1">
+                <option value={10}>10</option><option value={25}>25</option><option value={50}>50</option>
+              </select>
+              <button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="rounded border border-brand-dark/20 px-3 py-1.5 font-semibold disabled:opacity-40">Previous</button>
+              <span>Page {page} of {Math.max(1, pagination.totalPages)}</span>
+              <button type="button" disabled={page >= pagination.totalPages} onClick={() => setPage((value) => value + 1)} className="rounded border border-brand-dark/20 px-3 py-1.5 font-semibold disabled:opacity-40">Next</button>
+            </div>
+          </div>
         )}
       </main>
     </div>

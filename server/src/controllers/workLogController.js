@@ -73,17 +73,70 @@ const createWorkLog = async (req, res) => {
 // Get All Work Logs
 const getAllWorkLogs = async (req, res) => {
   try {
-    const workLogs = await WorkLog.find({
-      user: req.user._id,
-    }).sort({
-      date: -1,
-      timeFrom: -1,
-    });
+    // Preserve the legacy full-history response for callers that have not opted into paging.
+    if (Object.keys(req.query).length === 0) {
+      const workLogs = await WorkLog.find({ user: req.user._id }).sort({ date: -1, timeFrom: -1 });
+      return res.status(200).json({ success: true, count: workLogs.length, data: workLogs });
+    }
+    const filter = { user: req.user._id };
+    const { date, startDate, endDate, status, category, priority, search } = req.query;
+
+    if (date) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ success: false, message: "Invalid date" });
+      const start = new Date(`${date}T00:00:00.000Z`);
+      const end = new Date(start);
+      end.setUTCDate(end.getUTCDate() + 1);
+      filter.date = { $gte: start, $lt: end };
+    } else if (startDate || endDate) {
+      if (!startDate || !endDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+        return res.status(400).json({ success: false, message: "Valid startDate and endDate are required" });
+      }
+      const start = new Date(`${startDate}T00:00:00.000Z`);
+      const end = new Date(`${endDate}T00:00:00.000Z`);
+      if (start > end) return res.status(400).json({ success: false, message: "startDate cannot be after endDate" });
+      end.setUTCDate(end.getUTCDate() + 1);
+      filter.date = { $gte: start, $lt: end };
+    }
+    if (status && status !== "ALL") filter.status = status;
+    if (category && category !== "ALL") filter.category = category;
+    if (priority && priority !== "ALL") filter.priority = priority;
+    if (search?.trim()) {
+      const safeSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(safeSearch, "i");
+      filter.$or = ["task", "category", "activityType", "hallSection", "remarks"].map((field) => ({ [field]: regex }));
+    }
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+    const [result] = await WorkLog.aggregate([
+      { $match: filter },
+      { $facet: {
+        records: [
+          { $sort: { date: -1, timeFrom: 1 } },
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
+          { $project: { _id: 1, date: 1, task: 1, category: 1, activityType: 1, timeFrom: 1, timeTo: 1, spentMinutes: 1, hallSection: 1, status: 1, priority: 1, remarks: 1, createdAt: 1, googleSheetSyncStatus: 1 } },
+        ],
+        summary: [{ $group: {
+          _id: null,
+          totalTasks: { $sum: 1 },
+          totalWorkedMinutes: { $sum: "$spentMinutes" },
+          completedCount: { $sum: { $cond: [{ $eq: ["$status", "Completed"] }, 1, 0] } },
+          pendingCount: { $sum: { $cond: [{ $ne: ["$status", "Completed"] }, 1, 0] } },
+          minDate: { $min: "$date" },
+          maxDate: { $max: "$date" },
+        } }],
+      } },
+    ]);
+    const summary = result.summary[0] || { totalTasks: 0, totalWorkedMinutes: 0, completedCount: 0, pendingCount: 0, minDate: null, maxDate: null };
+    const total = summary.totalTasks;
 
     res.status(200).json({
       success: true,
-      count: workLogs.length,
-      data: workLogs,
+      count: result.records.length,
+      data: result.records,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      summary,
     });
   } catch (error) {
     res.status(500).json({
