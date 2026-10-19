@@ -252,7 +252,7 @@ export const SharedPortalLayout = () => {
     <div className="min-h-screen bg-brand-light font-sans text-brand-dark flex flex-col w-full overflow-x-hidden">
       {/* 1. HIERARCHY LEVEL 1: TOP BANNER (Shared Access, Expiry, Remarks Permission) */}
       <header className="bg-brand-dark text-brand-light px-4 py-3 sm:px-6 shadow-sm border-b border-brand-primary/30 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-2 sm:flex-nowrap">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-2">
           <div className="group relative">
             <button type="button" title="Shared Portal — Read Only" aria-label="Shared Portal — Read Only" aria-expanded={activeStatusHint === 'access'} onClick={() => setActiveStatusHint(activeStatusHint === 'access' ? null : 'access')} className="min-h-8 inline-flex items-center px-2.5 py-1 rounded-md bg-amber-400/20 border border-amber-400/40 text-amber-300 text-xs font-extrabold uppercase tracking-wider">
               <span className="hidden sm:inline">Shared Portal — Read Only</span><span className="sm:hidden">Read-only</span>
@@ -272,8 +272,25 @@ export const SharedPortalLayout = () => {
             </button>
             {activeStatusHint === 'viewer' && <span role="tooltip" className="absolute left-0 top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-lg bg-brand-light px-3 py-2 text-xs font-semibold text-brand-dark shadow-lg">Viewing Work Log of {owner?.name || 'User'}</span>}
           </div>
+          <div className="group relative sm:ml-auto">
+            <a
+              href="https://docs.google.com/spreadsheets/d/1hftbqkK2yEC_KY-GR-eSJpmurFkrwN-zkcfTVdPd0oI/edit?usp=sharing"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open Worklog sheet in Google Drive"
+              className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-brand-light/15 bg-brand-light/10 px-3 py-1.5 text-xs sm:text-sm font-semibold text-brand-light/90 transition-colors hover:bg-brand-light/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+            >
+              <svg className="h-4 w-4 shrink-0 text-emerald-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M8.2 3.5h5.1l7.1 12.3h-5.1L8.2 3.5Zm-2 3.5L1.7 16.5l2.6 4.5 4.5-7.8L6.2 7Zm8.3 7.9-2.4 4.1H4.3l-2.6-4.5h10.4l2.4.4Zm.8 0h5.1l-2.6 4.5h-5.2l2.7-4.5Z" />
+              </svg>
+              <span>Worklog sheet</span>
+            </a>
+            <span role="tooltip" className="pointer-events-none absolute right-0 top-full z-50 mt-2 hidden whitespace-nowrap rounded-lg bg-brand-light px-3 py-2 text-xs font-semibold text-brand-dark opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 sm:block">
+              Open Worklog sheet
+            </span>
+          </div>
           {portalMeta?.expiresAt && (
-            <div className="group relative sm:ml-auto">
+            <div className="group relative sm:ml-0">
               <button type="button" title={`Access expires in ${remainingTimeStr}`} aria-label={`Access expires in ${remainingTimeStr}`} aria-expanded={activeStatusHint === 'expiry'} onClick={() => setActiveStatusHint(activeStatusHint === 'expiry' ? null : 'expiry')} className="min-h-8 inline-flex items-center gap-1.5 font-medium bg-brand-light/10 px-2.5 py-1.5 rounded-lg text-xs sm:text-sm text-brand-light/75">
                 <svg className="w-3.5 h-3.5 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <span className="sm:hidden">{remainingTimeStr.replace(' remaining', '')}</span><span className="hidden sm:inline">{remainingTimeStr}</span>
