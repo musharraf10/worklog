@@ -42,11 +42,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background-color: rgba(226, 180, 189, 0.4);
+    background-color: rgba(205, 236, 205, 0.6);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(226, 180, 189, 0.7);
+    background-color: rgba(174, 220, 192, 0.7);
   }
 }
 
